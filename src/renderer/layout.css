@@ -2,6 +2,14 @@ main {
   padding-top: 0;
 }
 
+.url-row {
+  grid-template-columns: 1fr auto;
+}
+
+.url-row #analyzeButton {
+  min-width: 160px;
+}
+
 .hero.compact {
   margin: 0 0 22px;
   padding-top: 8px;
@@ -49,6 +57,14 @@ main {
 @media (max-width: 700px) {
   main {
     padding-top: 0;
+  }
+
+  .url-row {
+    grid-template-columns: 1fr;
+  }
+
+  .url-row #analyzeButton {
+    min-width: 0;
   }
 
   .options-grid,

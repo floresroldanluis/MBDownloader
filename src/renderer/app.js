@@ -45,8 +45,7 @@ function bindEvents() {
   $('aboutButton').onclick = () => $('aboutDialog').showModal();
   $('linktreeLink').onclick = () => window.desktop.openExternal('https://linktr.ee/floresroldanluis');
   $('themeButton').onclick = async () => { state.settings = await window.desktop.saveSettings({ theme: 'auto' }); refreshAutomaticTheme(); };
-  $('pasteButton').onclick = async () => { $('url').value = await navigator.clipboard.readText(); };
-  $('analyzeButton').onclick = analyze;
+  $('analyzeButton').onclick = pasteAndAnalyze;
   $('pasteDownloadButton').onclick = pasteAndDownload;
   $('batchButton').onclick = () => $('batchDialog').showModal();
   $('startBatch').onclick = startBatch;
@@ -143,6 +142,17 @@ async function analyze() {
     $('mediaPreview').classList.remove('hidden'); $('downloadButton').disabled = false; setMessage('Listo para descargar.');
   } catch (error) { state.metadata = null; $('downloadButton').disabled = true; setMessage(errorText(error), true); }
   finally { $('analyzeButton').disabled = false; }
+}
+
+async function pasteAndAnalyze() {
+  try {
+    const clipboardText = (await navigator.clipboard.readText()).trim();
+    if (!clipboardText) return setMessage('El portapapeles no contiene ningún enlace.', true);
+    $('url').value = clipboardText;
+    await analyze();
+  } catch (error) {
+    setMessage(`No se pudo leer el portapapeles: ${errorText(error)}`, true);
+  }
 }
 
 async function startDownload() {
