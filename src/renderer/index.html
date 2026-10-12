@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self'; script-src 'self'">
-  <title>MB Downloader</title><link rel="stylesheet" href="../../node_modules/@phosphor-icons/web/src/fill/style.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="layout.css"><link rel="stylesheet" href="telegram.css"><link rel="stylesheet" href="mode-icons.css">
+  <title>MB Downloader</title><link rel="stylesheet" href="../../node_modules/@phosphor-icons/web/src/fill/style.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="layout.css"><link rel="stylesheet" href="telegram.css"><link rel="stylesheet" href="mode-icons.css"><link rel="stylesheet" href="about.css">
 </head>
 <body>
   <div class="app-shell">
@@ -39,6 +39,6 @@
     </form>
   </dialog>
   <dialog id="batchDialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">COLA</span><h2>Descarga múltiple</h2></div><button class="icon-button" value="cancel">×</button></div><label>Un enlace por línea<textarea id="batchUrls" rows="8" placeholder="https://…&#10;https://…&#10;https://…"></textarea></label><p class="message">Telegram y los demás sitios se descargarán al mismo tiempo.</p><div class="dialog-actions"><button value="cancel" class="secondary">Cancelar</button><button id="startBatch" type="button" class="primary">Añadir a la cola</button></div></form></dialog>
-  <dialog id="aboutDialog"><form method="dialog"><div class="about-content"><img src="assets/mb-logo.png" alt="MB"><span class="eyebrow">VERSIÓN 0.4.15</span><h2>MB Downloader</h2><p>Un descargador multimedia personal, diseñado para reunir formatos, calidad, historial y motores actualizables en una sola experiencia.</p><button class="primary" value="default">Listo</button></div></form></dialog>
+  <dialog id="aboutDialog"><form method="dialog"><div class="about-content"><img class="about-logo" src="assets/mb-logo.png" alt="MB"><span class="eyebrow">VERSIÓN 0.4.16</span><h2>MB Downloader</h2><p>Un descargador multimedia personal, diseñado para reunir formatos, calidad, historial y motores actualizables en una sola experiencia.</p><div class="about-linktree"><div class="about-qr-card"><img src="assets/linktree-floresroldanluis-qr.png" alt="Código QR de Linktree de Luis Flores Roldán"></div><button id="linktreeLink" type="button" class="about-link">https://linktr.ee/floresroldanluis</button></div><button class="primary" value="default">Listo</button></div></form></dialog>
   <script src="app.js"></script>
 </body></html>

@@ -34,6 +34,7 @@ async function init() {
 function bindEvents() {
   $('settingsButton').onclick = () => { renderSettings(); $('settingsDialog').showModal(); refreshEngines(); };
   $('aboutButton').onclick = () => $('aboutDialog').showModal();
+  $('linktreeLink').onclick = () => window.desktop.openExternal('https://linktr.ee/floresroldanluis');
   $('themeButton').onclick = async () => { state.settings = await window.desktop.saveSettings({ theme: 'auto' }); refreshAutomaticTheme(); };
   $('pasteButton').onclick = async () => { $('url').value = await navigator.clipboard.readText(); };
   $('analyzeButton').onclick = analyze;

@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('desktop', {
   checkUpdate: url => ipcRenderer.invoke('update:check', url),
   installUpdate: info => ipcRenderer.invoke('update:install', info),
   openPath: target => ipcRenderer.invoke('path:open', target),
+  openExternal: target => ipcRenderer.invoke('link:open', target),
   showItem: target => ipcRenderer.invoke('path:show', target),
   trashItem: target => ipcRenderer.invoke('path:trash', target),
   systemDark: () => ipcRenderer.invoke('system:dark'),

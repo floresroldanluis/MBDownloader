@@ -1,16 +1,16 @@
-# Design QA — modos Video y Audio
+# Design QA — Acerca de con Linktree
 
 ## Referencia
 
-Captura proporcionada por el usuario con selector segmentado oscuro, icono de claqueta para Video e icono de nota musical para Audio.
+Captura proporcionada por el usuario de la ventana Acerca de y archivo QR original de Linktree.
 
 ## Comparación visual
 
-- Los dos controles conservan el selector segmentado, espaciado y estados activo/inactivo de MB Downloader.
-- Video utiliza un icono de claqueta sólido de Phosphor Icons.
-- Audio utiliza un icono de nota musical sólido de Phosphor Icons.
-- Los iconos están centrados verticalmente y separados 8 px de sus etiquetas.
-- El color de ambos iconos hereda correctamente el estado activo, el tema claro y el tema oscuro.
+- Se conserva la jerarquía original: logo, versión, nombre, descripción y botón Listo.
+- El QR suministrado aparece completo, sin recortes ni deformación.
+- La tarjeta blanca mantiene el contraste y la lectura del QR en tema oscuro y claro.
+- El enlace de Linktree queda visible, subrayado y centrado inmediatamente debajo del QR.
+- El contenido completo cabe dentro del diálogo y conserva separación suficiente entre elementos.
 
 ## Resultado
 

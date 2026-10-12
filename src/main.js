@@ -80,4 +80,10 @@ ipcMain.handle('update:install', (_, info) => updates.install(info));
 ipcMain.handle('path:open', (_, target) => shell.openPath(target));
 ipcMain.handle('path:show', (_, target) => shell.showItemInFolder(target));
 ipcMain.handle('path:trash', async (_, target) => { await shell.trashItem(target); return true; });
+ipcMain.handle('link:open', async (_, target) => {
+  const url = new URL(target);
+  if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Enlace externo no permitido.');
+  await shell.openExternal(url.toString());
+  return true;
+});
 ipcMain.handle('system:dark', () => nativeTheme.shouldUseDarkColors);
