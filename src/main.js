@@ -14,7 +14,7 @@ function animateOpacity(window, from, to, duration, complete) {
   const timer = setInterval(() => {
     if (window.isDestroyed()) return clearInterval(timer);
     const progress = Math.min(1, (Date.now() - startedAt) / duration);
-    const eased = 1 - Math.pow(1 - progress, 3);
+    const eased = progress * progress * (3 - 2 * progress);
     window.setOpacity(from + (to - from) * eased);
     if (progress === 1) { clearInterval(timer); complete?.(); }
   }, 16);
@@ -36,20 +36,28 @@ function createWindow() {
   win = new BrowserWindow({
     width, height, minWidth: Math.min(780, width), minHeight: Math.min(640, height),
     show: false, opacity: 0, title: 'MB Downloader', backgroundColor: '#080b18',
+    icon: path.join(__dirname, 'renderer', 'assets', 'mb-logo.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
   let closing = false;
-  win.once('ready-to-show', () => { win.center(); win.show(); animateOpacity(win, 0, 1, 260); });
+  win.once('ready-to-show', () => {
+    win.center();
+    win.show();
+    win.webContents.send('app:animation', 'opening');
+    animateOpacity(win, 0, 1, 460);
+  });
   win.on('close', event => {
     if (closing || win.isDestroyed()) return;
     event.preventDefault();
     closing = true;
-    animateOpacity(win, win.getOpacity(), 0, 220, () => win.destroy());
+    win.webContents.send('app:animation', 'closing');
+    animateOpacity(win, win.getOpacity(), 0, 340, () => win.destroy());
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
 
 app.whenReady().then(() => {
+  app.setAppUserModelId('com.luis.mbdownloader');
   Menu.setApplicationMenu(null);
   settings = new SettingsStore(); engines = new EngineManager(); updates = new UpdateService();
   const notify = (channel, payload) => win?.webContents.send(channel, payload);

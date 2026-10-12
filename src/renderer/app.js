@@ -22,6 +22,10 @@ function refreshAutomaticTheme() { applyTheme('auto'); }
 function errorText(error) { return (error?.message || String(error)).replace(/^Error invoking remote method '[^']+': Error:\s*/i, ''); }
 
 async function init() {
+  window.desktop.onAppAnimation(phase => {
+    document.body.classList.remove('app-opening', 'app-closing');
+    document.body.classList.add(phase === 'closing' ? 'app-closing' : 'app-opening');
+  });
   state.settings = await window.desktop.getSettings();
   applyTheme(state.settings.theme);
   window.setInterval(refreshAutomaticTheme, 60_000);
@@ -79,6 +83,7 @@ function clearUrl() {
   $('mediaTitle').textContent = '';
   $('mediaMeta').textContent = '';
   $('mediaPreview').classList.add('hidden');
+  $('mediaPreview').classList.remove('analyzing');
   $('analyzeButton').disabled = false;
   $('downloadButton').disabled = true;
   refreshClearUrlButton();
@@ -152,16 +157,22 @@ function refreshSummary() { $('formatSummary').textContent = state.mode === 'aud
 async function analyze() {
   const url = $('url').value.trim(); if (!url) return setMessage('Pega un enlace primero.', true);
   const analysisId = ++state.analysisId;
+  $('mediaTitle').textContent = 'Analizando contenido…';
+  $('mediaMeta').textContent = 'Consultando título, duración y vista previa';
+  $('thumbnail').removeAttribute('src');
+  $('mediaPreview').classList.add('analyzing');
+  $('mediaPreview').classList.remove('hidden');
   $('analyzeButton').disabled = true; setMessage('Analizando el enlace y consultando formatos…');
   try {
     const metadata = await window.desktop.metadata(url, state.settings.browserCookies);
     if (analysisId !== state.analysisId) return;
     state.metadata = metadata;
+    $('mediaPreview').classList.remove('analyzing');
     $('mediaTitle').textContent = state.metadata.title || 'Contenido multimedia';
     $('mediaMeta').textContent = [state.metadata.uploader, state.metadata.duration_string].filter(Boolean).join(' · ');
     if (state.metadata.thumbnail) $('thumbnail').src = state.metadata.thumbnail;
     $('mediaPreview').classList.remove('hidden'); $('downloadButton').disabled = false; setMessage('Listo para descargar.');
-  } catch (error) { if (analysisId === state.analysisId) { state.metadata = null; $('downloadButton').disabled = true; setMessage(errorText(error), true); } }
+  } catch (error) { if (analysisId === state.analysisId) { state.metadata = null; $('mediaPreview').classList.add('hidden'); $('mediaPreview').classList.remove('analyzing'); $('downloadButton').disabled = true; setMessage(errorText(error), true); } }
   finally { $('analyzeButton').disabled = false; }
 }
 

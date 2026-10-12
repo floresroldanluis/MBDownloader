@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('desktop', {
   showItem: target => ipcRenderer.invoke('path:show', target),
   trashItem: target => ipcRenderer.invoke('path:trash', target),
   systemDark: () => ipcRenderer.invoke('system:dark'),
+  onAppAnimation: callback => ipcRenderer.on('app:animation', (_, phase) => callback(phase)),
   onDownload: callback => ipcRenderer.on('download:event', (_, payload) => callback(payload)),
   onTelegram: callback => ipcRenderer.on('telegram:event', (_, payload) => callback(payload)),
   onTelegramPrompt: callback => ipcRenderer.on('telegram:prompt', (_, payload) => callback(payload))

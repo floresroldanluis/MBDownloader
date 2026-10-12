@@ -49,6 +49,7 @@ function downloadFile(url, destination, redirects = 0) {
 
 class SettingsStore {
   constructor() {
+    this.ready = false;
     this.file = path.join(app.getPath('userData'), 'settings.json');
     this.settings = { ...defaultSettings, destination: app.getPath('downloads') };
     try { this.settings = { ...this.settings, ...JSON.parse(fs.readFileSync(this.file, 'utf8')) }; } catch {}
@@ -147,10 +148,13 @@ class EngineManager {
     } finally { await fsp.rm(work, { recursive: true, force: true }); }
   }
   async ensureReady() {
+    if (this.ready) return true;
     if (!fs.existsSync(this.ytdlp)) await this.updateYtDlp();
-    const status = this.status();
-    if (!status.ffmpeg) throw new Error('FFmpeg no está instalado. Usa “Reparar motores” en Configuración.');
-    return status;
+    const ffmpegReady = path.isAbsolute(this.ffmpeg) ? fs.existsSync(this.ffmpeg) : Boolean(this.commandVersion(this.ffmpeg, ['-version']));
+    if (!ffmpegReady) throw new Error('FFmpeg no está instalado. Usa “Reparar motores” en Configuración.');
+    if (!fs.existsSync(this.deno)) throw new Error('Deno no está instalado. Usa “Actualizar motores” en Configuración.');
+    this.ready = true;
+    return true;
   }
   repairFfmpeg() {
     const child = spawn('winget', ['install', '--id', 'Gyan.FFmpeg', '-e', '--accept-package-agreements', '--accept-source-agreements'], { detached: true, windowsHide: false, stdio: 'ignore' });
