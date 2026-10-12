@@ -1,7 +1,7 @@
 'use strict';
 
 const $ = id => document.getElementById(id);
-const state = { settings: null, mode: 'video', metadata: null, update: null, jobs: new Map() };
+const state = { settings: null, mode: 'video', metadata: null, update: null, jobs: new Map(), analysisId: 0 };
 let toastTimer;
 
 function setMessage(text, error = false) { $('message').textContent = text; $('message').classList.toggle('error', error); }
@@ -46,10 +46,12 @@ function bindEvents() {
   $('linktreeLink').onclick = () => window.desktop.openExternal('https://linktr.ee/floresroldanluis');
   $('themeButton').onclick = async () => { state.settings = await window.desktop.saveSettings({ theme: 'auto' }); refreshAutomaticTheme(); };
   $('analyzeButton').onclick = pasteAndAnalyze;
+  $('clearUrlButton').onclick = clearUrl;
   $('pasteDownloadButton').onclick = pasteAndDownload;
   $('batchButton').onclick = () => $('batchDialog').showModal();
   $('startBatch').onclick = startBatch;
   $('url').addEventListener('keydown', e => { if (e.key === 'Enter') analyze(); });
+  $('url').addEventListener('input', refreshClearUrlButton);
   document.querySelectorAll('[data-mode]').forEach(button => button.onclick = () => setMode(button.dataset.mode));
   $('quality').onchange = refreshSummary; $('container').onchange = refreshSummary;
   $('downloadButton').onclick = startDownload;
@@ -65,12 +67,28 @@ function bindEvents() {
   const dropZone = $('dropZone');
   ['dragenter','dragover'].forEach(name => dropZone.addEventListener(name, e => { e.preventDefault(); dropZone.classList.add('dragging'); }));
   ['dragleave','drop'].forEach(name => dropZone.addEventListener(name, e => { e.preventDefault(); dropZone.classList.remove('dragging'); }));
-  dropZone.addEventListener('drop', e => { const text = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain'); if (text) { $('url').value = text.trim().split(/\s/)[0]; analyze(); } });
+  dropZone.addEventListener('drop', e => { const text = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain'); if (text) { $('url').value = text.trim().split(/\s/)[0]; refreshClearUrlButton(); analyze(); } });
+}
+
+function refreshClearUrlButton() { $('clearUrlButton').classList.toggle('hidden', !$('url').value); }
+function clearUrl() {
+  state.analysisId += 1;
+  state.metadata = null;
+  $('url').value = '';
+  $('thumbnail').removeAttribute('src');
+  $('mediaTitle').textContent = '';
+  $('mediaMeta').textContent = '';
+  $('mediaPreview').classList.add('hidden');
+  $('analyzeButton').disabled = false;
+  $('downloadButton').disabled = true;
+  refreshClearUrlButton();
+  setMessage('Analiza un enlace para comenzar.');
+  $('url').focus();
 }
 
 async function chooseQuickFolder() { const value = await window.desktop.chooseDestination(); if (!value) return; state.settings = await window.desktop.saveSettings({ destination: value }); $('savePath').textContent = value; $('destination').value = value; }
 function scrollToActivity() { requestAnimationFrame(() => document.querySelector('.downloads-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }
-async function pasteAndDownload() { try { $('url').value = await navigator.clipboard.readText(); await analyze(); if (state.metadata) await startDownload(); } catch (error) { setMessage(errorText(error), true); } }
+async function pasteAndDownload() { try { $('url').value = await navigator.clipboard.readText(); refreshClearUrlButton(); await analyze(); if (state.metadata) await startDownload(); } catch (error) { setMessage(errorText(error), true); } }
 async function startBatch() {
   const urls = $('batchUrls').value.split(/\r?\n/).map(value => value.trim()).filter(value => /^https?:\/\//i.test(value));
   if (!urls.length) return;
@@ -133,14 +151,17 @@ function refreshSummary() { $('formatSummary').textContent = state.mode === 'aud
 
 async function analyze() {
   const url = $('url').value.trim(); if (!url) return setMessage('Pega un enlace primero.', true);
+  const analysisId = ++state.analysisId;
   $('analyzeButton').disabled = true; setMessage('Analizando el enlace y consultando formatos…');
   try {
-    state.metadata = await window.desktop.metadata(url, state.settings.browserCookies);
+    const metadata = await window.desktop.metadata(url, state.settings.browserCookies);
+    if (analysisId !== state.analysisId) return;
+    state.metadata = metadata;
     $('mediaTitle').textContent = state.metadata.title || 'Contenido multimedia';
     $('mediaMeta').textContent = [state.metadata.uploader, state.metadata.duration_string].filter(Boolean).join(' · ');
     if (state.metadata.thumbnail) $('thumbnail').src = state.metadata.thumbnail;
     $('mediaPreview').classList.remove('hidden'); $('downloadButton').disabled = false; setMessage('Listo para descargar.');
-  } catch (error) { state.metadata = null; $('downloadButton').disabled = true; setMessage(errorText(error), true); }
+  } catch (error) { if (analysisId === state.analysisId) { state.metadata = null; $('downloadButton').disabled = true; setMessage(errorText(error), true); } }
   finally { $('analyzeButton').disabled = false; }
 }
 
@@ -149,6 +170,7 @@ async function pasteAndAnalyze() {
     const clipboardText = (await navigator.clipboard.readText()).trim();
     if (!clipboardText) return setMessage('El portapapeles no contiene ningún enlace.', true);
     $('url').value = clipboardText;
+    refreshClearUrlButton();
     await analyze();
   } catch (error) {
     setMessage(`No se pudo leer el portapapeles: ${errorText(error)}`, true);

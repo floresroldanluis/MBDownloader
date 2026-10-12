@@ -10,6 +10,40 @@ main {
   min-width: 160px;
 }
 
+.url-input-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.url-input-wrap input {
+  padding-right: 44px;
+}
+
+.clear-url {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.clear-url:hover {
+  background: var(--soft);
+  color: var(--text);
+}
+
+.clear-url:active {
+  transform: translateY(-50%) scale(.94);
+}
+
 .hero.compact {
   margin: 0 0 22px;
   padding-top: 8px;
