@@ -52,6 +52,7 @@ class SettingsStore {
     this.file = path.join(app.getPath('userData'), 'settings.json');
     this.settings = { ...defaultSettings, destination: app.getPath('downloads') };
     try { this.settings = { ...this.settings, ...JSON.parse(fs.readFileSync(this.file, 'utf8')) }; } catch {}
+    this.settings.theme = 'auto';
     if (!this.settings.updateUrl || /github\.com\/usuario\/repositorio/i.test(this.settings.updateUrl)) {
       this.settings.updateUrl = OFFICIAL_UPDATE_URL;
     }
@@ -59,6 +60,7 @@ class SettingsStore {
   get() { return { ...this.settings }; }
   async save(next) {
     this.settings = { ...this.settings, ...next };
+    this.settings.theme = 'auto';
     await fsp.mkdir(path.dirname(this.file), { recursive: true });
     await fsp.writeFile(this.file, JSON.stringify(this.settings, null, 2));
     return this.get();

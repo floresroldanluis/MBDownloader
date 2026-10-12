@@ -1,0 +1,11 @@
+.segmented button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.segmented button i {
+  font-size: 17px;
+  line-height: 1;
+}

@@ -5,15 +5,19 @@ const state = { settings: null, mode: 'video', metadata: null, update: null, job
 
 function setMessage(text, error = false) { $('message').textContent = text; $('message').classList.toggle('error', error); }
 function effectiveDark(theme) {
-  if (theme === 'dark') return true; if (theme === 'light') return false;
-  const hour = new Date().getHours(); return window.matchMedia('(prefers-color-scheme: dark)').matches || hour < 7 || hour >= 19;
+  const hour = new Date().getHours();
+  return hour < 7 || hour >= 19;
 }
 function applyTheme(theme) { document.body.classList.toggle('theme-dark', effectiveDark(theme)); }
+function refreshAutomaticTheme() { applyTheme('auto'); }
 function errorText(error) { return (error?.message || String(error)).replace(/^Error invoking remote method '[^']+': Error:\s*/i, ''); }
 
 async function init() {
   state.settings = await window.desktop.getSettings();
   applyTheme(state.settings.theme);
+  window.setInterval(refreshAutomaticTheme, 60_000);
+  window.addEventListener('focus', refreshAutomaticTheme);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshAutomaticTheme(); });
   (state.settings.history || []).forEach(job => state.jobs.set(job.id, job));
   bindEvents(); renderSettings(); renderJobs(); refreshEngines(); refreshTelegram(); checkUpdate(true);
   window.desktop.onDownload(updateJob);
@@ -30,7 +34,7 @@ async function init() {
 function bindEvents() {
   $('settingsButton').onclick = () => { renderSettings(); $('settingsDialog').showModal(); refreshEngines(); };
   $('aboutButton').onclick = () => $('aboutDialog').showModal();
-  $('themeButton').onclick = async () => { const next = document.body.classList.contains('theme-dark') ? 'light' : 'dark'; state.settings = await window.desktop.saveSettings({ theme: next }); applyTheme(next); };
+  $('themeButton').onclick = async () => { state.settings = await window.desktop.saveSettings({ theme: 'auto' }); refreshAutomaticTheme(); };
   $('pasteButton').onclick = async () => { $('url').value = await navigator.clipboard.readText(); };
   $('analyzeButton').onclick = analyze;
   $('pasteDownloadButton').onclick = pasteAndDownload;
