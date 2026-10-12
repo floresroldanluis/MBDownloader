@@ -14,11 +14,25 @@ function showToast(text, error = false) {
   toastTimer = setTimeout(() => toast.classList.add('hidden'), 3500);
 }
 function effectiveDark(theme) {
+  if (theme === 'dark') return true;
+  if (theme === 'light') return false;
   const hour = new Date().getHours();
   return hour < 7 || hour >= 19;
 }
-function applyTheme(theme) { document.body.classList.toggle('theme-dark', effectiveDark(theme)); }
-function refreshAutomaticTheme() { applyTheme('auto'); }
+function applyTheme(theme) {
+  const dark = effectiveDark(theme);
+  document.body.classList.toggle('theme-dark', dark);
+  $('themeButton').textContent = dark ? '☀' : '☾';
+  $('themeButton').setAttribute('aria-label', dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+  $('themeButton').title = dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+}
+function refreshAutomaticTheme() { if (state.settings?.theme === 'auto') applyTheme('auto'); }
+async function toggleTheme() {
+  const theme = effectiveDark(state.settings.theme) ? 'light' : 'dark';
+  state.settings = await window.desktop.saveSettings({ theme });
+  applyTheme(theme);
+  if ($('settingsDialog').open) $('theme').value = theme;
+}
 function errorText(error) { return (error?.message || String(error)).replace(/^Error invoking remote method '[^']+': Error:\s*/i, ''); }
 
 async function init() {
@@ -48,7 +62,7 @@ function bindEvents() {
   $('settingsButton').onclick = () => { renderSettings(); $('settingsDialog').showModal(); refreshEngines(); };
   $('aboutButton').onclick = () => $('aboutDialog').showModal();
   $('linktreeLink').onclick = () => window.desktop.openExternal('https://linktr.ee/floresroldanluis');
-  $('themeButton').onclick = async () => { state.settings = await window.desktop.saveSettings({ theme: 'auto' }); refreshAutomaticTheme(); };
+  $('themeButton').onclick = toggleTheme;
   $('analyzeButton').onclick = pasteAndAnalyze;
   $('clearUrlButton').onclick = clearUrl;
   $('pasteDownloadButton').onclick = pasteAndDownload;
