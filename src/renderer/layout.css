@@ -1,0 +1,64 @@
+main {
+  padding-top: 0;
+}
+
+.hero.compact {
+  margin: 0 0 22px;
+  padding-top: 8px;
+}
+
+.hero.compact p {
+  margin: 7px 0 0;
+}
+
+.hero.compact .hero-logo {
+  width: 76px;
+  height: 76px;
+}
+
+.hero.compact .eyebrow {
+  margin-top: -2px;
+}
+
+.update-actions {
+  align-items: stretch;
+  margin-top: 12px;
+}
+
+.update-actions button {
+  flex: 1;
+}
+
+.downloads-section {
+  scroll-margin-top: 96px;
+}
+
+.options-grid,
+.options-grid.video-mode {
+  grid-template-columns: 1.5fr 1fr;
+}
+
+.options-grid.video-mode label:first-child {
+  order: 2;
+}
+
+.options-grid.video-mode label:nth-child(2) {
+  order: 1;
+}
+
+@media (max-width: 700px) {
+  main {
+    padding-top: 0;
+  }
+
+  .options-grid,
+  .options-grid.video-mode {
+    grid-template-columns: 1fr;
+  }
+
+  .update-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+}

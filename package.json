@@ -1,0 +1,56 @@
+{
+  "name": "mb-downloader",
+  "version": "0.4.14",
+  "description": "Descargador multimedia de escritorio con motores actualizables",
+  "main": "src/main.js",
+  "author": "Luis",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "test": "node --test",
+    "dist": "electron-builder --win nsis",
+    "pack": "electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron": "^38.1.2",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.luis.mbdownloader",
+    "productName": "MB Downloader",
+    "asar": true,
+    "asarUnpack": [
+      "src/telegram-*.js",
+      "node_modules/**/*"
+    ],
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "vendor/bin",
+        "to": "bin",
+        "filter": [
+          "*.exe"
+        ]
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "dependencies": {
+    "teleproto": "^1.230.0"
+  }
+}

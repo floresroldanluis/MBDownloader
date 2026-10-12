@@ -1,0 +1,46 @@
+name: Publicar MB Downloader
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  windows-release:
+    runs-on: windows-latest
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v4
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Ejecutar pruebas
+        run: npm test
+      - name: Preparar motores portátiles
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force vendor/bin | Out-Null
+          Invoke-WebRequest https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -OutFile vendor/bin/yt-dlp.exe
+          Invoke-WebRequest https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip -OutFile deno.zip
+          Expand-Archive deno.zip -DestinationPath vendor/bin -Force
+          Invoke-WebRequest https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-expanded -Force
+          Copy-Item (Get-ChildItem ffmpeg-expanded -Recurse -Filter ffmpeg.exe | Select-Object -First 1).FullName vendor/bin/ffmpeg.exe
+          Copy-Item (Get-ChildItem ffmpeg-expanded -Recurse -Filter ffprobe.exe | Select-Object -First 1).FullName vendor/bin/ffprobe.exe
+          Copy-Item (Get-Command node).Source vendor/bin/node.exe
+      - name: Compilar instalador
+        run: npm run dist
+      - name: Publicar GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            release/MB Downloader Setup *.exe
+            release/MB Downloader Setup *.exe.blockmap
