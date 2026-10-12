@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self'; script-src 'self'">
-  <title>MB Downloader</title><link rel="stylesheet" href="../../node_modules/@phosphor-icons/web/src/fill/style.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="layout.css"><link rel="stylesheet" href="telegram.css"><link rel="stylesheet" href="mode-icons.css"><link rel="stylesheet" href="about.css">
+  <title>MB Downloader</title><link rel="stylesheet" href="../../node_modules/@phosphor-icons/web/src/fill/style.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="layout.css"><link rel="stylesheet" href="telegram.css"><link rel="stylesheet" href="mode-icons.css"><link rel="stylesheet" href="about.css"><link rel="stylesheet" href="toast.css">
 </head>
 <body>
   <div class="app-shell">
@@ -28,6 +28,7 @@
     </main>
     <footer>Descarga únicamente contenido propio o para el que tengas permiso.</footer>
   </div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   <dialog id="settingsDialog">
     <form method="dialog"><div class="dialog-head"><div><span class="eyebrow">PREFERENCIAS</span><h2>Configuración</h2></div><button class="icon-button" value="cancel">×</button></div>
       <div class="settings-group"><h3>Apariencia</h3><label>Tema<select id="theme"><option value="auto">Automático según la hora local</option></select></label><p class="message">Claro de 07:00 a 18:59 y oscuro de 19:00 a 06:59, usando la zona horaria de Windows.</p></div>
@@ -39,6 +40,6 @@
     </form>
   </dialog>
   <dialog id="batchDialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">COLA</span><h2>Descarga múltiple</h2></div><button class="icon-button" value="cancel">×</button></div><label>Un enlace por línea<textarea id="batchUrls" rows="8" placeholder="https://…&#10;https://…&#10;https://…"></textarea></label><p class="message">Telegram y los demás sitios se descargarán al mismo tiempo.</p><div class="dialog-actions"><button value="cancel" class="secondary">Cancelar</button><button id="startBatch" type="button" class="primary">Añadir a la cola</button></div></form></dialog>
-  <dialog id="aboutDialog"><form method="dialog"><div class="about-content"><img class="about-logo" src="assets/mb-logo.png" alt="MB"><span class="eyebrow">VERSIÓN 0.4.16</span><h2>MB Downloader</h2><p>Un descargador multimedia personal, diseñado para reunir formatos, calidad, historial y motores actualizables en una sola experiencia.</p><div class="about-linktree"><div class="about-qr-card"><img src="assets/linktree-floresroldanluis-qr.png" alt="Código QR de Linktree de Luis Flores Roldán"></div><button id="linktreeLink" type="button" class="about-link">https://linktr.ee/floresroldanluis</button></div><button class="primary" value="default">Listo</button></div></form></dialog>
+  <dialog id="aboutDialog"><form method="dialog"><div class="about-content"><img class="about-logo" src="assets/mb-logo.png" alt="MB"><span class="eyebrow">VERSIÓN 0.4.17</span><h2>MB Downloader</h2><p>Un descargador multimedia personal, diseñado para reunir formatos, calidad, historial y motores actualizables en una sola experiencia.</p><div class="about-linktree"><div class="about-qr-card"><img src="assets/linktree-floresroldanluis-qr.png" alt="Código QR de Linktree de Luis Flores Roldán"></div><button id="linktreeLink" type="button" class="about-link">https://linktr.ee/floresroldanluis</button></div><button class="primary" value="default">Listo</button></div></form></dialog>
   <script src="app.js"></script>
 </body></html>

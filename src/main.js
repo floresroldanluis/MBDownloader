@@ -1,6 +1,7 @@
 'use strict';
 
 const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu, screen } = require('electron');
+const fs = require('node:fs');
 const path = require('node:path');
 const { SettingsStore, EngineManager, TelegramService, DownloadManager, UpdateService } = require('./services');
 
@@ -79,7 +80,17 @@ ipcMain.handle('update:check', (_, url) => updates.check(url));
 ipcMain.handle('update:install', (_, info) => updates.install(info));
 ipcMain.handle('path:open', (_, target) => shell.openPath(target));
 ipcMain.handle('path:show', (_, target) => shell.showItemInFolder(target));
-ipcMain.handle('path:trash', async (_, target) => { await shell.trashItem(target); return true; });
+ipcMain.handle('path:trash', async (_, target) => {
+  if (!target || !fs.existsSync(target)) return { existed: false, trashed: false };
+  try {
+    await shell.trashItem(target);
+    return { existed: true, trashed: true };
+  } catch (error) {
+    // The file may have been removed after the existence check.
+    if (!fs.existsSync(target)) return { existed: false, trashed: false };
+    throw error;
+  }
+});
 ipcMain.handle('link:open', async (_, target) => {
   const url = new URL(target);
   if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Enlace externo no permitido.');

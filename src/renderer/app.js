@@ -2,8 +2,17 @@
 
 const $ = id => document.getElementById(id);
 const state = { settings: null, mode: 'video', metadata: null, update: null, jobs: new Map() };
+let toastTimer;
 
 function setMessage(text, error = false) { $('message').textContent = text; $('message').classList.toggle('error', error); }
+function showToast(text, error = false) {
+  const toast = $('toast');
+  toast.textContent = text;
+  toast.classList.toggle('toast-error', error);
+  toast.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.add('hidden'), 3500);
+}
 function effectiveDark(theme) {
   const hour = new Date().getHours();
   return hour < 7 || hour >= 19;
@@ -153,6 +162,17 @@ async function updateJob(event) {
 }
 
 async function persistHistory() { const history = [...state.jobs.values()].filter(job => job.state !== 'downloading').slice(-50); state.settings = await window.desktop.saveSettings({ history }); }
+async function removeDownloadedFile(job) {
+  try {
+    const result = await window.desktop.trashItem(job.filePath);
+    state.jobs.delete(job.id);
+    await persistHistory();
+    renderJobs();
+    showToast(result?.existed === false ? 'No existe el archivo. Se quitó de la actividad.' : 'Archivo enviado a la Papelera.');
+  } catch (error) {
+    showToast(`No se pudo eliminar el archivo: ${errorText(error)}`, true);
+  }
+}
 function renderJobs() {
   $('downloadList').innerHTML = '';
   if (!state.jobs.size) { $('downloadList').innerHTML = '<div class="empty">La cola está vacía. Tu primera descarga aparecerá aquí.</div>'; return; }
@@ -165,7 +185,7 @@ function renderJobs() {
     const actions = document.createElement('div'); actions.className = 'job-actions'; const detail = document.createElement('small'); detail.textContent = job.speed ? `${job.speed} · ${job.eta || ''}` : `${Math.round(job.progress || 0)}%`; actions.append(detail);
     const buttons = document.createElement('div'); buttons.className = 'job-buttons';
     if (job.state === 'downloading') { const cancel = document.createElement('button'); cancel.className = 'text-button'; cancel.textContent = 'Cancelar'; cancel.onclick = () => window.desktop.cancelDownload(job.id); buttons.append(cancel); }
-    if (job.filePath) { const show = document.createElement('button'); show.className = 'text-button'; show.textContent = 'Mostrar'; show.onclick = () => window.desktop.showItem(job.filePath); buttons.append(show); const remove = document.createElement('button'); remove.className = 'text-button'; remove.textContent = 'Eliminar'; remove.onclick = async () => { await window.desktop.trashItem(job.filePath); state.jobs.delete(job.id); await persistHistory(); renderJobs(); }; buttons.append(remove); }
+    if (job.filePath) { const show = document.createElement('button'); show.className = 'text-button'; show.textContent = 'Mostrar'; show.onclick = () => window.desktop.showItem(job.filePath); buttons.append(show); const remove = document.createElement('button'); remove.className = 'text-button'; remove.textContent = 'Eliminar'; remove.onclick = () => removeDownloadedFile(job); buttons.append(remove); }
     actions.append(buttons);
     row.append(top, progress, actions); $('downloadList').append(row);
   });
