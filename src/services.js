@@ -6,7 +6,7 @@ const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { spawn, spawnSync, fork } = require('node:child_process');
 const https = require('node:https');
-const { buildDownloadArgs, usesTelegramEngine, parseGithubRepository } = require('./domain');
+const { buildDownloadArgs, classifyDownloadFailure, usesTelegramEngine, parseGithubRepository } = require('./domain');
 const { TelegramClient } = require('teleproto');
 const { StringSession } = require('teleproto/sessions');
 
@@ -45,6 +45,22 @@ function downloadFile(url, destination, redirects = 0) {
       file.on('finish', () => file.close(resolve));
     }).on('error', fail);
   });
+}
+
+function networkAvailable() {
+  return new Promise(resolve => {
+    const request = https.get('https://www.google.com/generate_204', { timeout: 5000 }, response => {
+      response.resume();
+      resolve(response.statusCode >= 200 && response.statusCode < 500);
+    });
+    request.on('timeout', () => { request.destroy(); resolve(false); });
+    request.on('error', () => resolve(false));
+  });
+}
+
+async function freeDiskBytes(target) {
+  try { const stats = await fsp.statfs(target); return Number(stats.bavail) * Number(stats.bsize); }
+  catch { return null; }
 }
 
 class SettingsStore {
@@ -312,6 +328,7 @@ class IsolatedTelegramService {
   async disconnect() { try { await this.call('disconnect'); } finally { this.profile = null; await fsp.rm(this.secretFile, { force: true }); } return this.status(); }
   metadata(url) { return this.call('metadata', url); }
   start(job) { return this.call('start', job); }
+  resume(id) { return this.call('resume', id); }
   cancel(id) { return this.call('cancel', id); }
 }
 
@@ -343,27 +360,91 @@ class DownloadManager {
     if (usesTelegramEngine(job.url, this.telegram.status().connected)) return this.telegram.start(job);
     await this.engine.ensureReady();
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const args = ['--ffmpeg-location', this.engine.mediaBin, '--js-runtimes', `deno:${this.engine.deno}`, ...buildDownloadArgs(job)];
-    const child = spawn(this.engine.ytdlp, args, { windowsHide: true });
-    const record = { id, child, state: 'downloading', job };
+    const record = { id, child: null, state: 'downloading', job, attempt: 0, progress: 0, cancelled: false, retryTimer: null };
     this.jobs.set(id, record);
     this.notify('download:event', { id, state: 'downloading', progress: 0, title: job.title || job.url, url: job.url, startedAt: Date.now() });
+    this.launch(record);
+    return { id };
+  }
+  launch(record) {
+    if (record.cancelled) return;
+    const args = ['--ffmpeg-location', this.engine.mediaBin, '--js-runtimes', `deno:${this.engine.deno}`, ...buildDownloadArgs(record.job)];
+    const child = spawn(this.engine.ytdlp, args, { windowsHide: true });
+    record.child = child; record.state = 'downloading'; record.stderr = '';
     const consume = chunk => {
       const line = chunk.toString();
       const match = line.match(/download:\s*([\d.]+)%\|([^|]*)\|([^\r\n]*)/);
-      if (match) this.notify('download:event', { id, state: 'downloading', progress: Number(match[1]), speed: match[2].trim(), eta: match[3].trim() });
+      if (match) { record.progress = Number(match[1]); this.notify('download:event', { id: record.id, state: 'downloading', progress: record.progress, speed: match[2].trim(), eta: match[3].trim(), error: null }); }
       const filepath = line.match(/filepath:([^\r\n]+)/);
-      if (filepath) { record.filePath = filepath[1].trim(); this.notify('download:event', { id, filePath: record.filePath }); }
+      if (filepath) { record.filePath = filepath[1].trim(); this.notify('download:event', { id: record.id, filePath: record.filePath }); }
     };
-    child.stdout.on('data', consume); child.stderr.on('data', consume);
-    child.on('close', code => {
-      const state = record.state === 'cancelled' ? 'cancelled' : code === 0 ? 'completed' : 'failed';
-      record.state = state;
-      this.notify('download:event', { id, state, progress: state === 'completed' ? 100 : undefined, destination: job.destination, filePath: record.filePath, finishedAt: Date.now() });
-    });
-    return { id };
+    child.stdout.on('data', consume);
+    child.stderr.on('data', chunk => { record.stderr = `${record.stderr}${chunk}`.slice(-12000); consume(chunk); });
+    child.on('error', error => { record.stderr += `\n${error.message}`; });
+    child.on('close', code => this.handleClose(record, code));
   }
-  cancel(id) { const record = this.jobs.get(id); if (!record) return this.telegram.cancel(id); record.state = 'cancelled'; record.child.kill(); return true; }
+  async handleClose(record, code) {
+    record.child = null;
+    if (record.cancelled || record.state === 'cancelled') {
+      record.state = 'cancelled';
+      this.notify('download:event', { id: record.id, state: 'cancelled', finishedAt: Date.now() });
+      return;
+    }
+    if (code === 0) {
+      record.state = 'completed';
+      this.notify('download:event', { id: record.id, state: 'completed', progress: 100, destination: record.job.destination, filePath: record.filePath, error: null, finishedAt: Date.now() });
+      return;
+    }
+    const diagnosis = classifyDownloadFailure(record.stderr);
+    if (!diagnosis.recoverable || record.attempt >= 8) {
+      record.state = 'failed';
+      const suffix = record.attempt >= 8 ? ' Se agotaron los intentos automáticos; puedes iniciar la descarga nuevamente para continuar el archivo parcial.' : '';
+      this.notify('download:event', { id: record.id, state: 'failed', error: `${diagnosis.message}${suffix}`, diagnosis: record.stderr.trim().slice(-1500), finishedAt: Date.now() });
+      return;
+    }
+    record.state = 'paused';
+    record.failureKind = diagnosis.kind;
+    record.freeAtFailure = diagnosis.kind === 'disk' ? await freeDiskBytes(record.job.destination) : null;
+    this.notify('download:event', { id: record.id, state: 'paused', progress: record.progress, error: diagnosis.message, diagnosis: record.stderr.trim().slice(-1500), retryCount: record.attempt });
+    this.scheduleRecovery(record);
+  }
+  scheduleRecovery(record, delay = 10000) {
+    clearTimeout(record.retryTimer);
+    record.retryTimer = setTimeout(() => this.tryResume(record), delay);
+  }
+  async tryResume(record, manual = false) {
+    if (record.cancelled || record.state !== 'paused') return false;
+    let recovered = true;
+    let waitingMessage = '';
+    if (record.failureKind === 'network') {
+      recovered = await networkAvailable();
+      waitingMessage = 'Sin conexión. Se comprobará nuevamente en unos segundos.';
+    } else if (record.failureKind === 'disk') {
+      const free = await freeDiskBytes(record.job.destination);
+      const minimum = 256 * 1024 * 1024;
+      const required = record.freeAtFailure == null ? minimum : Math.max(minimum, record.freeAtFailure + 64 * 1024 * 1024);
+      recovered = free != null && free >= required;
+      waitingMessage = 'Esperando que liberes espacio en la unidad de destino.';
+    }
+    if (!recovered) {
+      this.notify('download:event', { id: record.id, state: 'paused', progress: record.progress, error: waitingMessage });
+      this.scheduleRecovery(record, manual ? 5000 : 15000);
+      return false;
+    }
+    record.attempt += 1;
+    this.notify('download:event', { id: record.id, state: 'downloading', progress: record.progress, error: null, diagnosis: null, retryCount: record.attempt, speed: 'Reanudando…', eta: '' });
+    this.launch(record);
+    return true;
+  }
+  resume(id) { const record = this.jobs.get(id); if (!record) return this.telegram.resume(id); clearTimeout(record.retryTimer); this.tryResume(record, true); return true; }
+  cancel(id) {
+    const record = this.jobs.get(id);
+    if (!record) return this.telegram.cancel(id);
+    record.cancelled = true; record.state = 'cancelled'; clearTimeout(record.retryTimer);
+    if (record.child) record.child.kill();
+    else this.notify('download:event', { id, state: 'cancelled', finishedAt: Date.now() });
+    return true;
+  }
 }
 
 class UpdateService {

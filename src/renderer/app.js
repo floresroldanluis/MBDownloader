@@ -214,11 +214,11 @@ async function startDownload() {
 
 async function updateJob(event) {
   const existing = state.jobs.get(event.id) || {}; state.jobs.set(event.id, { ...existing, ...event });
-  if (event.state && event.state !== 'downloading') await persistHistory();
+  if (['completed', 'failed', 'cancelled'].includes(event.state)) await persistHistory();
   renderJobs();
 }
 
-async function persistHistory() { const history = [...state.jobs.values()].filter(job => job.state !== 'downloading').slice(-50); state.settings = await window.desktop.saveSettings({ history }); }
+async function persistHistory() { const history = [...state.jobs.values()].filter(job => ['completed', 'failed', 'cancelled'].includes(job.state)).slice(-50); state.settings = await window.desktop.saveSettings({ history }); }
 async function removeDownloadedFile(job) {
   try {
     const result = await window.desktop.trashItem(job.filePath);
@@ -234,17 +234,20 @@ function renderJobs() {
   $('downloadList').innerHTML = '';
   if (!state.jobs.size) { $('downloadList').innerHTML = '<div class="empty">La cola está vacía. Tu primera descarga aparecerá aquí.</div>'; return; }
   [...state.jobs.values()].reverse().forEach(job => {
-    const row = document.createElement('div'); row.className = `job ${job.state === 'completed' ? 'success' : ''}`;
+    const row = document.createElement('div'); row.className = `job ${job.state === 'completed' ? 'success' : job.state === 'paused' ? 'paused' : job.state === 'failed' ? 'failed' : ''}`;
     const safeTitle = document.createElement('div'); safeTitle.className = 'job-title'; safeTitle.textContent = job.title || 'Descarga';
     const top = document.createElement('div'); top.className = 'job-top'; top.append(safeTitle);
-    const status = document.createElement('small'); status.textContent = job.error || ({ downloading:'Descargando',completed:'Completado',failed:'Error',cancelled:'Cancelado' })[job.state] || job.state; top.append(status);
+    const status = document.createElement('small'); status.textContent = job.error || ({ downloading:'Descargando',paused:'Pausada',completed:'Completado',failed:'Error',cancelled:'Cancelado' })[job.state] || job.state; top.append(status);
     const progress = document.createElement('div'); progress.className = 'progress'; const bar = document.createElement('i'); bar.style.width = `${job.progress || 0}%`; progress.append(bar);
     const actions = document.createElement('div'); actions.className = 'job-actions'; const detail = document.createElement('small'); detail.textContent = job.speed ? `${job.speed} · ${job.eta || ''}` : `${Math.round(job.progress || 0)}%`; actions.append(detail);
     const buttons = document.createElement('div'); buttons.className = 'job-buttons';
-    if (job.state === 'downloading') { const cancel = document.createElement('button'); cancel.className = 'text-button'; cancel.textContent = 'Cancelar'; cancel.onclick = () => window.desktop.cancelDownload(job.id); buttons.append(cancel); }
+    if (job.state === 'paused') { const resume = document.createElement('button'); resume.className = 'text-button'; resume.textContent = 'Reintentar ahora'; resume.onclick = () => window.desktop.resumeDownload(job.id); buttons.append(resume); }
+    if (job.state === 'downloading' || job.state === 'paused') { const cancel = document.createElement('button'); cancel.className = 'text-button'; cancel.textContent = 'Cancelar'; cancel.onclick = () => window.desktop.cancelDownload(job.id); buttons.append(cancel); }
     if (job.filePath) { const show = document.createElement('button'); show.className = 'text-button'; show.textContent = 'Mostrar'; show.onclick = () => window.desktop.showItem(job.filePath); buttons.append(show); const remove = document.createElement('button'); remove.className = 'text-button'; remove.textContent = 'Eliminar'; remove.onclick = () => removeDownloadedFile(job); buttons.append(remove); }
     actions.append(buttons);
-    row.append(top, progress, actions); $('downloadList').append(row);
+    row.append(top, progress, actions);
+    if (job.diagnosis) { const details = document.createElement('details'); details.className = 'job-diagnosis'; const summary = document.createElement('summary'); summary.textContent = 'Diagnóstico técnico'; const text = document.createElement('pre'); text.textContent = job.diagnosis; details.append(summary, text); row.append(details); }
+    $('downloadList').append(row);
   });
 }
 

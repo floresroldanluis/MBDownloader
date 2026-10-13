@@ -80,6 +80,7 @@ ipcMain.handle('engine:repair', () => engines.repairFfmpeg());
 ipcMain.handle('media:metadata', (_, url, cookies) => downloads.metadata(url, cookies));
 ipcMain.handle('download:start', (_, job) => downloads.start(job));
 ipcMain.handle('download:cancel', (_, id) => downloads.cancel(id));
+ipcMain.handle('download:resume', (_, id) => downloads.resume(id));
 ipcMain.handle('telegram:status', () => telegram.status());
 ipcMain.handle('telegram:connect', (_, input) => telegram.connect(input));
 ipcMain.handle('telegram:disconnect', () => telegram.disconnect());

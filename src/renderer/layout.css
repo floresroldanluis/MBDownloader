@@ -26,6 +26,40 @@ body.app-closing .app-shell {
   position: relative;
 }
 
+.job.paused {
+  border-color: color-mix(in srgb, #f59e0b 55%, var(--line));
+}
+
+.job.paused .progress i {
+  background: #f59e0b;
+}
+
+.job.failed {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+}
+
+.job-diagnosis {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.job-diagnosis summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.job-diagnosis pre {
+  max-height: 140px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
 .media-preview.analyzing img {
   background: color-mix(in srgb, var(--muted) 18%, transparent);
 }

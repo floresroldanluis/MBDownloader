@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildDownloadArgs, isDownloadUrl, usesTelegramEngine, parseGithubRepository } = require('../src/domain');
+const { buildDownloadArgs, classifyDownloadFailure, isDownloadUrl, usesTelegramEngine, parseGithubRepository } = require('../src/domain');
 
 test('acepta solamente enlaces web válidos', () => {
   assert.equal(isDownloadUrl('https://example.com/video'), true);
@@ -15,6 +15,15 @@ test('construye descarga de video sin ejecutar la URL como opción', () => {
 test('construye extracción de audio', () => {
   const args = buildDownloadArgs({ url:'https://example.com/a', destination:'C:\\Downloads', mode:'audio', audioFormat:'flac' });
   assert.ok(args.includes('-x')); assert.ok(args.includes('flac'));
+});
+test('activa archivos parciales para reanudar descargas', () => {
+  const args = buildDownloadArgs({ url:'https://example.com/video', destination:'C:\\Downloads', mode:'video' });
+  assert.ok(args.includes('--continue')); assert.ok(args.includes('--part'));
+});
+test('diagnostica fallos recuperables de red y disco', () => {
+  assert.deepEqual(classifyDownloadFailure('ERROR: [WinError 10054] connection reset').kind, 'network');
+  assert.deepEqual(classifyDownloadFailure('ENOSPC: no space left on device').kind, 'disk');
+  assert.equal(classifyDownloadFailure('Requested format is not available').recoverable, false);
 });
 test('extrae propietario y repositorio de GitHub', () => {
   assert.deepEqual(parseGithubRepository('https://github.com/acme/downloader/releases/latest'), { owner:'acme', repo:'downloader' });

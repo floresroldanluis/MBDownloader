@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('desktop', {
   metadata: (url, cookies) => ipcRenderer.invoke('media:metadata', url, cookies),
   startDownload: job => ipcRenderer.invoke('download:start', job),
   cancelDownload: id => ipcRenderer.invoke('download:cancel', id),
+  resumeDownload: id => ipcRenderer.invoke('download:resume', id),
   telegramStatus: () => ipcRenderer.invoke('telegram:status'),
   connectTelegram: input => ipcRenderer.invoke('telegram:connect', input),
   disconnectTelegram: () => ipcRenderer.invoke('telegram:disconnect'),

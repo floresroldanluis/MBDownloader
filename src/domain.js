@@ -32,11 +32,24 @@ function safeFilenameTemplate() {
   return '%(title).180B [%(id)s].%(ext)s';
 }
 
+function classifyDownloadFailure(detail) {
+  const text = String(detail || 'Error desconocido').trim();
+  if (/DOWNLOAD_CANCELLED|cancel(?:led|ado)/i.test(text)) return { kind: 'cancelled', recoverable: false, message: 'Descarga cancelada.' };
+  if (/ENOSPC|no space left|not enough (?:free )?space|disk (?:is )?full|espacio insuficiente|espacio en disco/i.test(text)) {
+    return { kind: 'disk', recoverable: true, message: 'Descarga pausada: no hay espacio suficiente en el disco.' };
+  }
+  if (/timed? out|timeout|connection|network|temporary failure|unable to download|remote host|name resolution|WinError 10(?:0\d\d|1\d\d)|HTTP Error (?:408|425|429|5\d\d)/i.test(text)) {
+    return { kind: 'network', recoverable: true, message: 'Descarga pausada: se perdió la conexión o el servidor no responde.' };
+  }
+  return { kind: 'fatal', recoverable: false, message: text || 'La descarga falló por un error no recuperable.' };
+}
+
 function buildDownloadArgs(job) {
   if (!isDownloadUrl(job.url)) throw new Error('El enlace no es una URL HTTP/HTTPS válida.');
   const output = path.join(job.destination, safeFilenameTemplate());
   const common = [
-    '--newline', '--no-playlist', '--no-overwrites', '--windows-filenames',
+    '--newline', '--no-playlist', '--no-overwrites', '--windows-filenames', '--continue', '--part',
+    '--retries', '2', '--fragment-retries', '2', '--file-access-retries', '2', '--retry-sleep', '2',
     '--progress-template', 'download:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s',
     '--print', 'after_move:filepath:%(filepath)s',
     '-o', output
@@ -64,4 +77,4 @@ function parseGithubRepository(value) {
   } catch { return null; }
 }
 
-module.exports = { buildDownloadArgs, isDownloadUrl, usesTelegramEngine, parseGithubRepository };
+module.exports = { buildDownloadArgs, classifyDownloadFailure, isDownloadUrl, usesTelegramEngine, parseGithubRepository };
