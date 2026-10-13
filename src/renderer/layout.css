@@ -154,6 +154,50 @@ body.app-closing .app-shell {
 
 .downloads-section {
   scroll-margin-top: 96px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.download-list,
+.job,
+.job-top,
+.job-actions {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.job-top {
+  align-items: flex-start;
+}
+
+.job-title {
+  display: -webkit-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.job-top > small {
+  flex: 0 0 auto;
+  padding-top: 2px;
+  white-space: nowrap;
+}
+
+.job-actions {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.job-buttons {
+  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .options-grid,

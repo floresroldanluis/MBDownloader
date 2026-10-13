@@ -235,7 +235,7 @@ function renderJobs() {
   if (!state.jobs.size) { $('downloadList').innerHTML = '<div class="empty">La cola está vacía. Tu primera descarga aparecerá aquí.</div>'; return; }
   [...state.jobs.values()].reverse().forEach(job => {
     const row = document.createElement('div'); row.className = `job ${job.state === 'completed' ? 'success' : job.state === 'paused' ? 'paused' : job.state === 'failed' ? 'failed' : ''}`;
-    const safeTitle = document.createElement('div'); safeTitle.className = 'job-title'; safeTitle.textContent = job.title || 'Descarga';
+    const safeTitle = document.createElement('div'); safeTitle.className = 'job-title'; safeTitle.textContent = job.title || 'Descarga'; safeTitle.title = job.title || 'Descarga';
     const top = document.createElement('div'); top.className = 'job-top'; top.append(safeTitle);
     const status = document.createElement('small'); status.textContent = job.error || ({ downloading:'Descargando',paused:'Pausada',completed:'Completado',failed:'Error',cancelled:'Cancelado' })[job.state] || job.state; top.append(status);
     const progress = document.createElement('div'); progress.className = 'progress'; const bar = document.createElement('i'); bar.style.width = `${job.progress || 0}%`; progress.append(bar);
