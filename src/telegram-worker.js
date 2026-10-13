@@ -81,7 +81,7 @@ const methods = {
   start(job) {
     const id = `${Date.now()}-tg-${Math.random().toString(16).slice(2)}`; const record = { cancelled: false, state: 'downloading', attempt: 0, progress: 0, manualResume: false }; active.set(id, record);
     const emit = payload => send({ type: 'event', channel: 'download:event', payload: { id, ...payload } });
-    emit({ state: 'downloading', progress: 0, title: job.title || job.url, url: job.url, startedAt: Date.now() });
+    emit({ state: 'downloading', progress: 0, title: job.title || job.url, thumbnail: job.thumbnail || null, url: job.url, startedAt: Date.now() });
     (async () => {
       let target, partial;
       try {

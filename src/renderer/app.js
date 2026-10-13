@@ -114,7 +114,11 @@ async function startBatch() {
   $('startBatch').disabled = true;
   let added = 0;
   for (const url of urls) {
-    try { await window.desktop.startDownload({ url, destination: state.settings.destination, browserCookies: state.settings.browserCookies, mode: state.mode, videoQuality: state.mode === 'video' ? $('quality').value : undefined, container: state.mode === 'video' ? $('container').value : undefined, audioFormat: state.mode === 'audio' ? $('quality').value : undefined, audioQuality: state.mode === 'audio' ? $('container').value : undefined }); added += 1; }
+    try {
+      let metadata = null;
+      try { metadata = await window.desktop.metadata(url, state.settings.browserCookies); } catch {}
+      await window.desktop.startDownload({ url, title: metadata?.title, thumbnail: metadata?.thumbnail, destination: state.settings.destination, browserCookies: state.settings.browserCookies, mode: state.mode, videoQuality: state.mode === 'video' ? $('quality').value : undefined, container: state.mode === 'video' ? $('container').value : undefined, audioFormat: state.mode === 'audio' ? $('quality').value : undefined, audioQuality: state.mode === 'audio' ? $('container').value : undefined }); added += 1;
+    }
     catch (error) { setMessage(`${url}: ${errorText(error)}`, true); }
   }
   $('startBatch').disabled = false; $('batchDialog').close(); $('batchUrls').value = '';
@@ -203,7 +207,7 @@ async function pasteAndAnalyze() {
 }
 
 async function startDownload() {
-  const job = { url: $('url').value.trim(), title: state.metadata?.title, destination: state.settings.destination, browserCookies: state.settings.browserCookies, mode: state.mode };
+  const job = { url: $('url').value.trim(), title: state.metadata?.title, thumbnail: state.metadata?.thumbnail, destination: state.settings.destination, browserCookies: state.settings.browserCookies, mode: state.mode };
   if (state.mode === 'audio') { job.audioFormat = $('quality').value; job.audioQuality = $('container').value; }
   else { job.videoQuality = $('quality').value; job.container = $('container').value; }
   $('downloadButton').disabled = true;
@@ -245,7 +249,9 @@ function renderJobs() {
     if (job.state === 'downloading' || job.state === 'paused') { const cancel = document.createElement('button'); cancel.className = 'text-button'; cancel.textContent = 'Cancelar'; cancel.onclick = () => window.desktop.cancelDownload(job.id); buttons.append(cancel); }
     if (job.filePath) { const show = document.createElement('button'); show.className = 'text-button'; show.textContent = 'Mostrar'; show.onclick = () => window.desktop.showItem(job.filePath); buttons.append(show); const remove = document.createElement('button'); remove.className = 'text-button'; remove.textContent = 'Eliminar'; remove.onclick = () => removeDownloadedFile(job); buttons.append(remove); }
     actions.append(buttons);
-    row.append(top, progress, actions);
+    const thumbnail = document.createElement('img'); thumbnail.className = `job-thumbnail${job.thumbnail ? '' : ' placeholder'}`; thumbnail.src = job.thumbnail || 'assets/mb-logo.png'; thumbnail.alt = ''; thumbnail.loading = 'lazy'; thumbnail.onerror = () => { thumbnail.onerror = null; thumbnail.src = 'assets/mb-logo.png'; thumbnail.classList.add('placeholder'); };
+    const content = document.createElement('div'); content.className = 'job-content'; content.append(top, progress, actions);
+    const header = document.createElement('div'); header.className = 'job-header'; header.append(thumbnail, content); row.append(header);
     if (job.diagnosis) { const details = document.createElement('details'); details.className = 'job-diagnosis'; const summary = document.createElement('summary'); summary.textContent = 'Diagnóstico técnico'; const text = document.createElement('pre'); text.textContent = job.diagnosis; details.append(summary, text); row.append(details); }
     $('downloadList').append(row);
   });

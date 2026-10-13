@@ -274,7 +274,7 @@ class TelegramService {
   start(job) {
     const id = `${Date.now()}-tg-${Math.random().toString(16).slice(2)}`;
     const record = { id, cancelled: false }; this.active.set(id, record);
-    this.notify('download:event', { id, state: 'downloading', progress: 0, title: job.title || job.url, url: job.url, startedAt: Date.now() });
+    this.notify('download:event', { id, state: 'downloading', progress: 0, title: job.title || job.url, thumbnail: job.thumbnail || null, url: job.url, startedAt: Date.now() });
     (async () => {
       try {
         const message = await this.resolveMessage(job.url);
@@ -362,7 +362,7 @@ class DownloadManager {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const record = { id, child: null, state: 'downloading', job, attempt: 0, progress: 0, cancelled: false, retryTimer: null };
     this.jobs.set(id, record);
-    this.notify('download:event', { id, state: 'downloading', progress: 0, title: job.title || job.url, url: job.url, startedAt: Date.now() });
+    this.notify('download:event', { id, state: 'downloading', progress: 0, title: job.title || job.url, thumbnail: job.thumbnail || null, url: job.url, startedAt: Date.now() });
     this.launch(record);
     return { id };
   }
