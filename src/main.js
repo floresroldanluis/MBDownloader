@@ -3,6 +3,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu, screen } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawn } = require('node:child_process');
 const { SettingsStore, EngineManager, TelegramService, DownloadManager, UpdateService } = require('./services');
 
 let win, settings, engines, telegram, downloads, updates;
@@ -104,7 +105,19 @@ ipcMain.on('telegram:prompt-response', (_, payload) => { const resolve = telegra
 ipcMain.handle('update:check', (_, url) => updates.check(url));
 ipcMain.handle('update:install', (_, info) => updates.install(info));
 ipcMain.handle('path:open', (_, target) => shell.openPath(target));
-ipcMain.handle('path:show', (_, target) => shell.showItemInFolder(target));
+ipcMain.handle('path:show', async (_, input) => {
+  const rawTarget = typeof input === 'string' ? input : input?.filePath;
+  const destination = typeof input === 'object' ? input?.destination : path.dirname(rawTarget || '');
+  const target = String(rawTarget || '').replace(/^['"]|['"]$/g, '').replace(/[\r\n]/g, '').trim();
+  if (!target || !fs.existsSync(target) || !fs.statSync(target).isFile()) {
+    if (destination && fs.existsSync(destination)) await shell.openPath(destination);
+    return { found: false };
+  }
+  const normalized = path.normalize(target);
+  if (process.platform === 'win32') spawn('explorer.exe', [`/select,${normalized}`], { detached: true, stdio: 'ignore' }).unref();
+  else shell.showItemInFolder(normalized);
+  return { found: true, path: normalized };
+});
 ipcMain.handle('path:trash', async (_, target) => {
   if (!target || !fs.existsSync(target)) return { existed: false, trashed: false };
   try {

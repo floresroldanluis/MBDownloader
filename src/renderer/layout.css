@@ -244,25 +244,6 @@ body.app-closing .app-shell {
   text-align: right;
 }
 
-.job-dismiss {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--line));
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-  color: var(--danger);
-  font-size: 20px;
-  line-height: 1;
-}
-
-.job-dismiss:hover,
-.job-dismiss:focus-visible {
-  background: color-mix(in srgb, var(--danger) 22%, transparent);
-  outline: none;
-}
-
 .job-actions {
   align-items: center;
   flex-wrap: wrap;

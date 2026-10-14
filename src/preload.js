@@ -20,7 +20,7 @@ contextBridge.exposeInMainWorld('desktop', {
   installUpdate: info => ipcRenderer.invoke('update:install', info),
   openPath: target => ipcRenderer.invoke('path:open', target),
   openExternal: target => ipcRenderer.invoke('link:open', target),
-  showItem: target => ipcRenderer.invoke('path:show', target),
+  showItem: input => ipcRenderer.invoke('path:show', input),
   trashItem: target => ipcRenderer.invoke('path:trash', target),
   systemDark: () => ipcRenderer.invoke('system:dark'),
   onAppAnimation: callback => ipcRenderer.on('app:animation', (_, phase) => callback(phase)),
