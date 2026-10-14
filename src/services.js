@@ -522,7 +522,7 @@ class DownloadManager {
     record.child = null;
     if (record.cancelled || record.state === 'cancelled') {
       record.state = 'cancelled';
-      this.notify('download:event', { id: record.id, state: 'cancelled', finishedAt: Date.now() });
+      this.notify('download:event', { id: record.id, state: 'cancelled', error: null, diagnosis: null, speed: null, eta: null, finishedAt: Date.now() });
       return;
     }
     if (code === 0) {
@@ -561,6 +561,7 @@ class DownloadManager {
       recovered = free != null && free >= required;
       waitingMessage = 'Esperando que liberes espacio en la unidad de destino.';
     }
+    if (record.cancelled || record.state !== 'paused') return false;
     if (!recovered) {
       this.notify('download:event', { id: record.id, state: 'paused', progress: record.progress, error: waitingMessage });
       this.scheduleRecovery(record, manual ? 5000 : 15000);
@@ -576,8 +577,8 @@ class DownloadManager {
     const record = this.jobs.get(id);
     if (!record) return this.telegram.cancel(id);
     record.cancelled = true; record.state = 'cancelled'; clearTimeout(record.retryTimer);
+    this.notify('download:event', { id, state: 'cancelled', error: null, diagnosis: null, speed: null, eta: null, finishedAt: Date.now() });
     if (record.child) record.child.kill();
-    else this.notify('download:event', { id, state: 'cancelled', finishedAt: Date.now() });
     return true;
   }
 }

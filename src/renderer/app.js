@@ -238,10 +238,10 @@ function renderJobs() {
   $('downloadList').innerHTML = '';
   if (!state.jobs.size) { $('downloadList').innerHTML = '<div class="empty">La cola está vacía. Tu primera descarga aparecerá aquí.</div>'; return; }
   [...state.jobs.values()].reverse().forEach(job => {
-    const row = document.createElement('div'); row.className = `job ${job.state === 'completed' ? 'success' : job.state === 'paused' ? 'paused' : job.state === 'failed' ? 'failed' : ''}`;
+    const row = document.createElement('div'); row.className = `job ${job.state === 'completed' ? 'success' : job.state === 'paused' ? 'paused' : job.state === 'failed' ? 'failed' : job.state === 'cancelled' ? 'cancelled' : ''}`;
     const safeTitle = document.createElement('div'); safeTitle.className = 'job-title'; safeTitle.textContent = job.title || 'Descarga'; safeTitle.title = job.title || 'Descarga';
     const top = document.createElement('div'); top.className = 'job-top'; top.append(safeTitle);
-    const status = document.createElement('small'); status.textContent = job.error || ({ downloading:'Descargando',paused:'Pausada',completed:'Completado',failed:'Error',cancelled:'Cancelado' })[job.state] || job.state; top.append(status);
+    const status = document.createElement('small'); status.className = 'job-status'; status.textContent = job.state === 'cancelled' ? '✕ Descarga cancelada' : job.error || ({ downloading:'Descargando',paused:'Pausada',completed:'Completado',failed:'Error' })[job.state] || job.state; top.append(status);
     const progress = document.createElement('div'); progress.className = 'progress'; const bar = document.createElement('i'); bar.style.width = `${job.progress || 0}%`; progress.append(bar);
     const actions = document.createElement('div'); actions.className = 'job-actions'; const detail = document.createElement('small'); detail.textContent = job.speed ? `${job.speed} · ${job.eta || ''}` : `${Math.round(job.progress || 0)}%`; actions.append(detail);
     const buttons = document.createElement('div'); buttons.className = 'job-buttons';

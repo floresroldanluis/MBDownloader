@@ -38,6 +38,15 @@ body.app-closing .app-shell {
   border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
 }
 
+.job.cancelled {
+  border-color: color-mix(in srgb, var(--danger) 42%, var(--line));
+}
+
+.job.cancelled .job-status {
+  color: var(--danger);
+  font-weight: 700;
+}
+
 .job-diagnosis {
   margin-top: 12px;
   color: var(--muted);

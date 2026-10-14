@@ -113,13 +113,13 @@ const methods = {
           }
         }
         if (partial) await fs.rm(partial, { force: true });
-        emit({ state: 'cancelled', finishedAt: Date.now() });
+        emit({ state: 'cancelled', error: null, diagnosis: null, speed: null, eta: null, finishedAt: Date.now() });
       } finally { clearTimeout(record.timer); active.delete(id); }
     })();
     return { id };
   },
   resume(id) { const item = active.get(id); if (!item || item.state !== 'paused') return false; item.manualResume = true; clearTimeout(item.timer); item.wake?.(); return true; },
-  cancel(id) { const item = active.get(id); if (!item) return false; item.cancelled = true; clearTimeout(item.timer); item.wake?.(); return true; }
+  cancel(id) { const item = active.get(id); if (!item) return false; item.cancelled = true; item.state = 'cancelled'; clearTimeout(item.timer); item.wake?.(); send({ type: 'event', channel: 'download:event', payload: { id, state: 'cancelled', error: null, diagnosis: null, speed: null, eta: null, finishedAt: Date.now() } }); return true; }
 };
 
 parentPort.on('message', async event => {
