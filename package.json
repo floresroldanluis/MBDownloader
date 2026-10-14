@@ -1,6 +1,6 @@
 {
   "name": "mb-downloader",
-  "version": "0.4.31",
+  "version": "0.4.32",
   "description": "Descargador multimedia de escritorio con motores actualizables",
   "main": "src/main.js",
   "author": "Luis",

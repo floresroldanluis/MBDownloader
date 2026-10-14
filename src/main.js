@@ -107,10 +107,8 @@ ipcMain.handle('update:install', (_, info) => updates.install(info));
 ipcMain.handle('path:open', (_, target) => shell.openPath(target));
 ipcMain.handle('path:show', async (_, input) => {
   const rawTarget = typeof input === 'string' ? input : input?.filePath;
-  const destination = typeof input === 'object' ? input?.destination : path.dirname(rawTarget || '');
   const target = String(rawTarget || '').replace(/^['"]|['"]$/g, '').replace(/[\r\n]/g, '').trim();
   if (!target || !fs.existsSync(target) || !fs.statSync(target).isFile()) {
-    if (destination && fs.existsSync(destination)) await shell.openPath(destination);
     return { found: false };
   }
   const normalized = path.normalize(target);

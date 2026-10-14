@@ -226,7 +226,7 @@ async function persistHistory() { const history = [...state.jobs.values()].filte
 async function showDownloadedFile(job) {
   try {
     const result = await window.desktop.showItem({ filePath: job.filePath, destination: job.destination || state.settings.destination });
-    showToast(result?.found ? 'Archivo seleccionado en el Explorador.' : 'No se encontró el archivo descargado. Se abrió la carpeta de destino.', !result?.found);
+    showToast(result?.found ? 'Archivo seleccionado en el Explorador.' : 'El archivo no se encuentra disponible.', !result?.found);
   } catch (error) { showToast(`No se pudo mostrar el archivo: ${errorText(error)}`, true); }
 }
 async function removeDownloadedFile(job) {
@@ -239,6 +239,12 @@ async function removeDownloadedFile(job) {
   } catch (error) {
     showToast(`No se pudo eliminar el archivo: ${errorText(error)}`, true);
   }
+}
+async function removeHistoryItem(job) {
+  state.jobs.delete(job.id);
+  await persistHistory();
+  renderJobs();
+  showToast('Descarga eliminada del historial.');
 }
 function renderJobs() {
   $('downloadList').innerHTML = '';
@@ -255,6 +261,7 @@ function renderJobs() {
     const buttons = document.createElement('div'); buttons.className = 'job-buttons';
     if (job.state === 'paused') { const resume = document.createElement('button'); resume.className = 'text-button'; resume.textContent = 'Reintentar ahora'; resume.onclick = () => window.desktop.resumeDownload(job.id); buttons.append(resume); }
     if (job.state === 'downloading' || job.state === 'paused') { const cancel = document.createElement('button'); cancel.className = 'text-button'; cancel.textContent = 'Cancelar'; cancel.onclick = () => window.desktop.cancelDownload(job.id); buttons.append(cancel); }
+    if (job.state === 'cancelled') { const remove = document.createElement('button'); remove.className = 'text-button'; remove.textContent = 'Eliminar'; remove.onclick = () => removeHistoryItem(job); buttons.append(remove); }
     if (job.filePath && job.state !== 'cancelled') { const show = document.createElement('button'); show.className = 'text-button'; show.textContent = 'Mostrar'; show.onclick = () => showDownloadedFile(job); buttons.append(show); const remove = document.createElement('button'); remove.className = 'text-button'; remove.textContent = 'Eliminar'; remove.onclick = () => removeDownloadedFile(job); buttons.append(remove); }
     actions.append(buttons);
     const thumbnail = document.createElement('img'); thumbnail.className = `job-thumbnail${job.thumbnail ? '' : ' placeholder'}`; thumbnail.src = job.thumbnail || 'assets/mb-logo.png'; thumbnail.alt = ''; thumbnail.loading = 'lazy'; thumbnail.onerror = () => { thumbnail.onerror = null; thumbnail.src = 'assets/mb-logo.png'; thumbnail.classList.add('placeholder'); };
