@@ -6,7 +6,7 @@ const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { spawn, spawnSync, fork } = require('node:child_process');
 const https = require('node:https');
-const { buildDownloadArgs, classifyDownloadFailure, usesTelegramEngine, parseGithubRepository } = require('./domain');
+const { buildDownloadArgs, classifyDownloadFailure, usesTelegramEngine, parseGoogleDriveFileId, parseGoogleDriveMetadataHtml, parseGithubRepository } = require('./domain');
 const { TelegramClient } = require('teleproto');
 const { StringSession } = require('teleproto/sessions');
 
@@ -29,6 +29,37 @@ function requestJson(url, redirects = 0) {
     req.on('error', reject);
     req.setTimeout(20000, () => req.destroy(new Error('Tiempo de espera agotado.')));
   });
+}
+
+function requestText(url, options = {}, redirects = 0) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 MBDownloader', ...options.headers } }, res => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && redirects < 5) {
+        res.resume();
+        return resolve(requestText(new URL(res.headers.location, url).href, options, redirects + 1));
+      }
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', chunk => { body += chunk; if (body.length > 5_000_000) req.destroy(new Error('La respuesta de Google Drive es demasiado grande.')); });
+      res.on('end', () => resolve({ statusCode: res.statusCode, headers: res.headers, body, url }));
+    });
+    req.on('error', reject);
+    req.setTimeout(30000, () => req.destroy(new Error('Tiempo de espera agotado al consultar Google Drive.')));
+  });
+}
+
+function parseDriveConfirmation(html, fileId) {
+  const form = String(html || '').match(/<form[^>]+id="download-form"[^>]+action="([^"]+)"[\s\S]*?<\/form>/i);
+  if (!form) return null;
+  const params = new URLSearchParams();
+  for (const match of form[0].matchAll(/<input[^>]+name="([^"]+)"[^>]+value="([^"]*)"/gi)) params.set(match[1], match[2].replace(/&amp;/g, '&'));
+  if (!params.has('id')) params.set('id', fileId);
+  return `${form[1]}?${params.toString()}`;
+}
+
+function safeLocalFilename(value, fallback) {
+  const cleaned = String(value || fallback).replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').replace(/[. ]+$/g, '').trim();
+  return cleaned || fallback;
 }
 
 function downloadFile(url, destination, redirects = 0) {
@@ -336,6 +367,12 @@ class DownloadManager {
   constructor(engine, telegram, notify) { this.engine = engine; this.telegram = telegram; this.notify = notify; this.jobs = new Map(); }
   async metadata(url, browserCookies) {
     if (usesTelegramEngine(url, this.telegram.status().connected)) return this.telegram.metadata(url);
+    const driveId = parseGoogleDriveFileId(url);
+    if (driveId) {
+      const page = await requestText(`https://drive.google.com/file/d/${encodeURIComponent(driveId)}/view`);
+      if (page.statusCode !== 200) throw new Error(`Google Drive no permitió consultar el archivo (HTTP ${page.statusCode}).`);
+      return parseGoogleDriveMetadataHtml(page.body, driveId);
+    }
     await this.engine.ensureReady();
     const args = ['--js-runtimes', `deno:${this.engine.deno}`, '--dump-single-json', '--no-playlist'];
     if (browserCookies && browserCookies !== 'none') args.push('--cookies-from-browser', browserCookies);
@@ -358,12 +395,22 @@ class DownloadManager {
   }
   async start(job) {
     if (usesTelegramEngine(job.url, this.telegram.status().connected)) return this.telegram.start(job);
+    const driveId = parseGoogleDriveFileId(job.url);
+    if (driveId) return this.startGoogleDrive(job, driveId);
     await this.engine.ensureReady();
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const record = { id, child: null, state: 'downloading', job, attempt: 0, progress: 0, cancelled: false, retryTimer: null };
     this.jobs.set(id, record);
     this.notify('download:event', { id, state: 'downloading', progress: 0, title: job.title || job.url, thumbnail: job.thumbnail || null, url: job.url, startedAt: Date.now() });
     this.launch(record);
+    return { id };
+  }
+  startGoogleDrive(job, driveId) {
+    const id = `${Date.now()}-drive-${Math.random().toString(16).slice(2)}`;
+    const record = { id, child: null, request: null, state: 'downloading', job, driveId, attempt: 0, progress: 0, cancelled: false, retryTimer: null };
+    this.jobs.set(id, record);
+    this.notify('download:event', { id, state: 'downloading', progress: 0, title: job.title || `Archivo de Google Drive ${driveId}`, thumbnail: job.thumbnail || null, url: job.url, startedAt: Date.now() });
+    this.launchGoogleDrive(record);
     return { id };
   }
   launch(record) {
@@ -382,6 +429,66 @@ class DownloadManager {
     child.stderr.on('data', chunk => { record.stderr = `${record.stderr}${chunk}`.slice(-12000); consume(chunk); });
     child.on('error', error => { record.stderr += `\n${error.message}`; });
     child.on('close', code => this.handleClose(record, code));
+  }
+  async launchGoogleDrive(record) {
+    if (record.cancelled) return;
+    record.state = 'downloading'; record.stderr = '';
+    record.child = { kill: () => record.request?.destroy(new Error('DOWNLOAD_CANCELLED')) };
+    const open = (url, headers = {}, redirects = 0) => new Promise((resolve, reject) => {
+      const request = https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 MBDownloader', ...headers } }, response => {
+        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location && redirects < 5) {
+          response.resume();
+          return resolve(open(new URL(response.headers.location, url).href, headers, redirects + 1));
+        }
+        resolve(response);
+      });
+      record.request = request;
+      request.on('error', reject);
+      request.setTimeout(30000, () => request.destroy(new Error('Tiempo de espera agotado al descargar desde Google Drive.')));
+    });
+    const readResponse = response => new Promise((resolve, reject) => {
+      let body = ''; response.setEncoding('utf8');
+      response.on('data', chunk => { body += chunk; if (body.length > 1_000_000) response.destroy(new Error('Google Drive no entregó el archivo esperado.')); });
+      response.on('end', () => resolve(body)); response.on('error', reject);
+    });
+    try {
+      const fallback = `GoogleDrive-${record.driveId}`;
+      if (!record.target) {
+        record.target = path.join(record.job.destination, safeLocalFilename(record.job.title, fallback));
+        record.partial = `${record.target}.part`;
+      }
+      const existing = fs.existsSync(record.partial) ? fs.statSync(record.partial).size : 0;
+      const initialUrl = `https://drive.usercontent.google.com/download?id=${encodeURIComponent(record.driveId)}&export=download&authuser=0`;
+      let response = await open(initialUrl, existing ? { Range: `bytes=${existing}-` } : {});
+      let cookies = (response.headers['set-cookie'] || []).map(value => value.split(';')[0]).join('; ');
+      if (/text\/html/i.test(response.headers['content-type'] || '')) {
+        const confirmation = parseDriveConfirmation(await readResponse(response), record.driveId);
+        if (!confirmation) throw new Error('Google Drive no entregó la autorización de descarga. Verifica que el archivo sea público.');
+        response = await open(confirmation, { ...(cookies ? { Cookie: cookies } : {}), ...(existing ? { Range: `bytes=${existing}-` } : {}) });
+      }
+      if (![200, 206].includes(response.statusCode)) { response.resume(); throw new Error(`HTTP Error ${response.statusCode}: Google Drive rechazó la descarga.`); }
+      if (/text\/html/i.test(response.headers['content-type'] || '')) { const detail = await readResponse(response); throw new Error(/quota|too many users|download quota/i.test(detail) ? 'Google Drive agotó temporalmente la cuota de descarga de este archivo.' : 'Google Drive devolvió una página en lugar del archivo.'); }
+      let offset = fs.existsSync(record.partial) ? fs.statSync(record.partial).size : 0;
+      if (response.statusCode === 200 && offset) { offset = 0; await fsp.rm(record.partial, { force: true }); }
+      const contentLength = Number(response.headers['content-length']) || 0;
+      const contentRangeTotal = Number(String(response.headers['content-range'] || '').match(/\/(\d+)$/)?.[1]) || 0;
+      const total = contentRangeTotal || (contentLength ? offset + contentLength : 0);
+      let received = offset; let lastUpdate = 0;
+      await new Promise((resolve, reject) => {
+        const file = fs.createWriteStream(record.partial, { flags: offset ? 'a' : 'w' });
+        response.on('data', chunk => {
+          received += chunk.length; const now = Date.now();
+          if (now - lastUpdate >= 250) { lastUpdate = now; record.progress = total ? received / total * 100 : record.progress; this.notify('download:event', { id: record.id, state: 'downloading', progress: record.progress, speed: total ? `${(received / 1048576).toFixed(1)} MB de ${(total / 1048576).toFixed(1)} MB` : `${(received / 1048576).toFixed(1)} MB`, eta: '', error: null }); }
+        });
+        response.on('error', reject); file.on('error', error => { response.destroy(); reject(error); }); file.on('finish', resolve); response.pipe(file);
+      });
+      await fsp.rm(record.target, { force: true }); await fsp.rename(record.partial, record.target);
+      record.filePath = record.target; this.notify('download:event', { id: record.id, filePath: record.target });
+      record.child = null; record.request = null; await this.handleClose(record, 0);
+    } catch (error) {
+      record.child = null; record.request = null; record.stderr = error.message || String(error);
+      await this.handleClose(record, 1);
+    }
   }
   async handleClose(record, code) {
     record.child = null;
@@ -433,7 +540,7 @@ class DownloadManager {
     }
     record.attempt += 1;
     this.notify('download:event', { id: record.id, state: 'downloading', progress: record.progress, error: null, diagnosis: null, retryCount: record.attempt, speed: 'Reanudando…', eta: '' });
-    this.launch(record);
+    if (record.driveId) this.launchGoogleDrive(record); else this.launch(record);
     return true;
   }
   resume(id) { const record = this.jobs.get(id); if (!record) return this.telegram.resume(id); clearTimeout(record.retryTimer); this.tryResume(record, true); return true; }

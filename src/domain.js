@@ -28,6 +28,32 @@ function usesTelegramEngine(value, connected) {
   } catch { return false; }
 }
 
+function parseGoogleDriveFileId(value) {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    if (!['drive.google.com', 'www.drive.google.com', 'drive.usercontent.google.com'].includes(host)) return null;
+    const pathMatch = url.pathname.match(/\/file\/d\/([^/]+)/i);
+    return pathMatch?.[1] || url.searchParams.get('id') || null;
+  } catch { return null; }
+}
+
+function decodeHtml(value) {
+  return String(value || '')
+    .replace(/&quot;/g, '"').replace(/&#39;|&#x27;/g, "'")
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+}
+
+function parseGoogleDriveMetadataHtml(html, fileId) {
+  const source = String(html || '');
+  const title = decodeHtml(source.match(/<meta\s+(?:property="og:title"|itemprop="name")\s+content="([^"]+)"/i)?.[1]) || `Google Drive ${fileId}`;
+  const itemJsonThumbnail = source.match(/itemJson:\s*\[null,"(?:[^"\\]|\\.)*","([^"]+)"/i)?.[1];
+  const image = source.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i)?.[1] || itemJsonThumbnail || '';
+  const thumbnail = decodeHtml(image).replace(/\\u003d/g, '=').replace(/\\u0026/g, '&');
+  const size = Number(source.match(/itemJson:[\s\S]{0,4000}?\[null,null,"(\d+)"\]/i)?.[1]) || null;
+  return { id: `gdrive-${fileId}`, title, uploader: 'Google Drive', duration_string: size ? `${(size / 1073741824).toFixed(1)} GB` : '', thumbnail: thumbnail || null, filesize: size, googleDrive: true };
+}
+
 function safeFilenameTemplate() {
   return '%(title).180B [%(id)s].%(ext)s';
 }
@@ -77,4 +103,4 @@ function parseGithubRepository(value) {
   } catch { return null; }
 }
 
-module.exports = { buildDownloadArgs, classifyDownloadFailure, isDownloadUrl, usesTelegramEngine, parseGithubRepository };
+module.exports = { buildDownloadArgs, classifyDownloadFailure, isDownloadUrl, usesTelegramEngine, parseGoogleDriveFileId, parseGoogleDriveMetadataHtml, parseGithubRepository };

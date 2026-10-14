@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildDownloadArgs, classifyDownloadFailure, isDownloadUrl, usesTelegramEngine, parseGithubRepository } = require('../src/domain');
+const { buildDownloadArgs, classifyDownloadFailure, isDownloadUrl, usesTelegramEngine, parseGoogleDriveFileId, parseGoogleDriveMetadataHtml, parseGithubRepository } = require('../src/domain');
 
 test('acepta solamente enlaces web válidos', () => {
   assert.equal(isDownloadUrl('https://example.com/video'), true);
@@ -28,6 +28,21 @@ test('diagnostica fallos recuperables de red y disco', () => {
 test('extrae propietario y repositorio de GitHub', () => {
   assert.deepEqual(parseGithubRepository('https://github.com/acme/downloader/releases/latest'), { owner:'acme', repo:'downloader' });
   assert.equal(parseGithubRepository('https://example.com/acme/downloader'), null);
+});
+
+test('reconoce enlaces de archivo de Google Drive', () => {
+  const id = '1Ng_53m2P2jHmRaeomN_sOd4wI9v70Yol';
+  assert.equal(parseGoogleDriveFileId(`https://drive.google.com/file/d/${id}/view`), id);
+  assert.equal(parseGoogleDriveFileId(`https://drive.usercontent.google.com/download?id=${id}&export=download`), id);
+  assert.equal(parseGoogleDriveFileId('https://docs.google.com/document/d/example'), null);
+});
+
+test('extrae la vista previa pública de Google Drive sin yt-dlp', () => {
+  const html = '<meta property="og:title" content="Mi video &amp; prueba.mkv"><script>itemJson: [null,"Mi video","https://drive.google.com/thumb\\u003ds1600-rw-v1",null,null,null,null,null,null,null,null,"video/x-matroska",null,null,0,null,"url",null,"download",null,5,0,null,null,null,[null,null,"2459419556"]]</script>';
+  const result = parseGoogleDriveMetadataHtml(html, 'abc');
+  assert.equal(result.title, 'Mi video & prueba.mkv');
+  assert.equal(result.thumbnail, 'https://drive.google.com/thumb=s1600-rw-v1');
+  assert.equal(result.filesize, 2459419556);
 });
 
 test('Telegram conectado solo intercepta enlaces de Telegram', () => {
