@@ -54,6 +54,22 @@ function createWindow() {
     animateOpacity(win, win.getOpacity(), 0, 340, () => win.destroy());
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  win.webContents.on('context-menu', (_, params) => {
+    if (!params.isEditable && !params.selectionText) return;
+    const can = params.editFlags || {};
+    const template = params.isEditable ? [
+      { label: 'Deshacer', role: 'undo', enabled: Boolean(can.canUndo) },
+      { label: 'Rehacer', role: 'redo', enabled: Boolean(can.canRedo) },
+      { type: 'separator' },
+      { label: 'Cortar', role: 'cut', enabled: Boolean(can.canCut) },
+      { label: 'Copiar', role: 'copy', enabled: Boolean(can.canCopy) },
+      { label: 'Pegar', role: 'paste', enabled: Boolean(can.canPaste) },
+      { label: 'Eliminar', role: 'delete', enabled: Boolean(can.canDelete) },
+      { type: 'separator' },
+      { label: 'Seleccionar todo', role: 'selectAll', enabled: Boolean(can.canSelectAll) }
+    ] : [{ label: 'Copiar', role: 'copy', enabled: Boolean(params.selectionText) }];
+    Menu.buildFromTemplate(template).popup({ window: win });
+  });
 }
 
 app.whenReady().then(() => {

@@ -166,7 +166,14 @@ body.app-closing .app-shell {
   max-width: 100%;
 }
 
+.job {
+  overflow: hidden;
+}
+
 .job-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.85fr);
+  gap: 16px;
   align-items: flex-start;
 }
 
@@ -180,6 +187,7 @@ body.app-closing .app-shell {
 
 .job-content {
   min-width: 0;
+  overflow: hidden;
 }
 
 .job-thumbnail {
@@ -210,9 +218,13 @@ body.app-closing .app-shell {
 }
 
 .job-top > small {
-  flex: 0 0 auto;
   padding-top: 2px;
-  white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+  text-align: right;
 }
 
 .job-actions {
@@ -247,6 +259,16 @@ body.app-closing .app-shell {
 
   .job-thumbnail {
     width: 84px;
+  }
+
+  .job-top {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .job-top > small {
+    padding-top: 0;
+    text-align: left;
   }
 
   main {
