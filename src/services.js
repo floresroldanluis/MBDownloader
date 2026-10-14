@@ -48,6 +48,24 @@ function requestText(url, options = {}, redirects = 0) {
   });
 }
 
+function requestBuffer(url, redirects = 0) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 MBDownloader' } }, res => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && redirects < 5) {
+        res.resume();
+        return resolve(requestBuffer(new URL(res.headers.location, url).href, redirects + 1));
+      }
+      if (res.statusCode !== 200) { res.resume(); return reject(new Error(`HTTP ${res.statusCode}`)); }
+      const chunks = []; let length = 0;
+      res.on('data', chunk => { length += chunk.length; if (length > 2_000_000) res.destroy(new Error('La miniatura es demasiado grande.')); else chunks.push(chunk); });
+      res.on('end', () => resolve({ contentType: res.headers['content-type'] || 'image/jpeg', data: Buffer.concat(chunks) }));
+      res.on('error', reject);
+    });
+    req.on('error', reject);
+    req.setTimeout(20000, () => req.destroy(new Error('Tiempo de espera agotado al cargar la miniatura.')));
+  });
+}
+
 function parseDriveConfirmation(html, fileId) {
   const form = String(html || '').match(/<form[^>]+id="download-form"[^>]+action="([^"]+)"[\s\S]*?<\/form>/i);
   if (!form) return null;
@@ -371,7 +389,14 @@ class DownloadManager {
     if (driveId) {
       const page = await requestText(`https://drive.google.com/file/d/${encodeURIComponent(driveId)}/view`);
       if (page.statusCode !== 200) throw new Error(`Google Drive no permitió consultar el archivo (HTTP ${page.statusCode}).`);
-      return parseGoogleDriveMetadataHtml(page.body, driveId);
+      const metadata = parseGoogleDriveMetadataHtml(page.body, driveId);
+      if (metadata.thumbnail) {
+        try {
+          const image = await requestBuffer(metadata.thumbnail);
+          metadata.thumbnail = `data:${image.contentType};base64,${image.data.toString('base64')}`;
+        } catch { metadata.thumbnail = null; }
+      }
+      return metadata;
     }
     await this.engine.ensureReady();
     const args = ['--js-runtimes', `deno:${this.engine.deno}`, '--dump-single-json', '--no-playlist'];
@@ -460,14 +485,17 @@ class DownloadManager {
       const existing = fs.existsSync(record.partial) ? fs.statSync(record.partial).size : 0;
       const initialUrl = `https://drive.usercontent.google.com/download?id=${encodeURIComponent(record.driveId)}&export=download&authuser=0`;
       let response = await open(initialUrl, existing ? { Range: `bytes=${existing}-` } : {});
-      let cookies = (response.headers['set-cookie'] || []).map(value => value.split(';')[0]).join('; ');
       if (/text\/html/i.test(response.headers['content-type'] || '')) {
         const confirmation = parseDriveConfirmation(await readResponse(response), record.driveId);
         if (!confirmation) throw new Error('Google Drive no entregó la autorización de descarga. Verifica que el archivo sea público.');
-        response = await open(confirmation, { ...(cookies ? { Cookie: cookies } : {}), ...(existing ? { Range: `bytes=${existing}-` } : {}) });
+        response = await open(confirmation, existing ? { Range: `bytes=${existing}-` } : {});
       }
       if (![200, 206].includes(response.statusCode)) { response.resume(); throw new Error(`HTTP Error ${response.statusCode}: Google Drive rechazó la descarga.`); }
-      if (/text\/html/i.test(response.headers['content-type'] || '')) { const detail = await readResponse(response); throw new Error(/quota|too many users|download quota/i.test(detail) ? 'Google Drive agotó temporalmente la cuota de descarga de este archivo.' : 'Google Drive devolvió una página en lugar del archivo.'); }
+      if (/text\/html/i.test(response.headers['content-type'] || '')) {
+        const detail = await readResponse(response);
+        const quotaExceeded = /too many users have viewed or downloaded|downloadQuotaExceeded|download quota exceeded|demasiados usuarios han visto o descargado/i.test(detail);
+        throw new Error(quotaExceeded ? 'Google Drive agotó temporalmente la cuota de descarga de este archivo.' : 'Google Drive devolvió una página de confirmación inesperada. Intenta nuevamente.');
+      }
       let offset = fs.existsSync(record.partial) ? fs.statSync(record.partial).size : 0;
       if (response.statusCode === 200 && offset) { offset = 0; await fsp.rm(record.partial, { force: true }); }
       const contentLength = Number(response.headers['content-length']) || 0;

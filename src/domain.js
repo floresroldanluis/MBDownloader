@@ -64,7 +64,7 @@ function classifyDownloadFailure(detail) {
   if (/ENOSPC|no space left|not enough (?:free )?space|disk (?:is )?full|espacio insuficiente|espacio en disco/i.test(text)) {
     return { kind: 'disk', recoverable: true, message: 'Descarga pausada: no hay espacio suficiente en el disco.' };
   }
-  if (/timed? out|timeout|connection|network|temporary failure|unable to download|remote host|name resolution|WinError 10(?:0\d\d|1\d\d)|HTTP Error (?:408|425|429|5\d\d)/i.test(text)) {
+  if (/timed? out|timeout|connection|network|temporary failure|unable to download|remote host|name resolution|WinError 10(?:0\d\d|1\d\d)|HTTP Error (?:408|425|429|5\d\d)|Google Drive (?:agotó temporalmente la cuota|devolvió una página de confirmación)/i.test(text)) {
     return { kind: 'network', recoverable: true, message: 'Descarga pausada: se perdió la conexión o el servidor no responde.' };
   }
   return { kind: 'fatal', recoverable: false, message: text || 'La descarga falló por un error no recuperable.' };

@@ -22,6 +22,7 @@ test('activa archivos parciales para reanudar descargas', () => {
 });
 test('diagnostica fallos recuperables de red y disco', () => {
   assert.deepEqual(classifyDownloadFailure('ERROR: [WinError 10054] connection reset').kind, 'network');
+  assert.deepEqual(classifyDownloadFailure('Google Drive agotó temporalmente la cuota de descarga de este archivo.').kind, 'network');
   assert.deepEqual(classifyDownloadFailure('ENOSPC: no space left on device').kind, 'disk');
   assert.equal(classifyDownloadFailure('Requested format is not available').recoverable, false);
 });
