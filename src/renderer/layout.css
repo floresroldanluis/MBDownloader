@@ -226,7 +226,15 @@ body.app-closing .app-shell {
   line-clamp: 3;
 }
 
-.job-top > small {
+.job-status-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.job-status {
   padding-top: 2px;
   min-width: 0;
   max-width: 100%;
@@ -234,6 +242,25 @@ body.app-closing .app-shell {
   overflow-wrap: anywhere;
   line-height: 1.5;
   text-align: right;
+}
+
+.job-dismiss {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.job-dismiss:hover,
+.job-dismiss:focus-visible {
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+  outline: none;
 }
 
 .job-actions {
@@ -275,7 +302,11 @@ body.app-closing .app-shell {
     gap: 4px;
   }
 
-  .job-top > small {
+  .job-status-wrap {
+    justify-content: flex-start;
+  }
+
+  .job-status {
     padding-top: 0;
     text-align: left;
   }

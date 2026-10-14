@@ -223,6 +223,12 @@ async function updateJob(event) {
 }
 
 async function persistHistory() { const history = [...state.jobs.values()].filter(job => ['completed', 'failed', 'cancelled'].includes(job.state)).slice(-50); state.settings = await window.desktop.saveSettings({ history }); }
+async function removeHistoryItem(job) {
+  state.jobs.delete(job.id);
+  await persistHistory();
+  renderJobs();
+  showToast('Descarga eliminada del historial.');
+}
 async function removeDownloadedFile(job) {
   try {
     const result = await window.desktop.trashItem(job.filePath);
@@ -241,9 +247,12 @@ function renderJobs() {
     const row = document.createElement('div'); row.className = `job ${job.state === 'completed' ? 'success' : job.state === 'paused' ? 'paused' : job.state === 'failed' ? 'failed' : job.state === 'cancelled' ? 'cancelled' : ''}`;
     const safeTitle = document.createElement('div'); safeTitle.className = 'job-title'; safeTitle.textContent = job.title || 'Descarga'; safeTitle.title = job.title || 'Descarga';
     const top = document.createElement('div'); top.className = 'job-top'; top.append(safeTitle);
-    const status = document.createElement('small'); status.className = 'job-status'; status.textContent = job.state === 'cancelled' ? '✕ Descarga cancelada' : job.error || ({ downloading:'Descargando',paused:'Pausada',completed:'Completado',failed:'Error' })[job.state] || job.state; top.append(status);
+    const statusWrap = document.createElement('div'); statusWrap.className = 'job-status-wrap';
+    const status = document.createElement('small'); status.className = 'job-status'; status.textContent = job.state === 'cancelled' ? 'Descarga cancelada' : job.error || ({ downloading:'Descargando',paused:'Pausada',completed:'Completado',failed:'Error' })[job.state] || job.state; statusWrap.append(status);
+    if (job.state === 'cancelled') { const dismiss = document.createElement('button'); dismiss.className = 'job-dismiss'; dismiss.type = 'button'; dismiss.textContent = '×'; dismiss.title = 'Eliminar del historial'; dismiss.setAttribute('aria-label', 'Eliminar descarga cancelada del historial'); dismiss.onclick = () => removeHistoryItem(job); statusWrap.append(dismiss); }
+    top.append(statusWrap);
     const progress = document.createElement('div'); progress.className = 'progress'; const bar = document.createElement('i'); bar.style.width = `${job.progress || 0}%`; progress.append(bar);
-    const actions = document.createElement('div'); actions.className = 'job-actions'; const detail = document.createElement('small'); detail.textContent = job.speed ? `${job.speed} · ${job.eta || ''}` : `${Math.round(job.progress || 0)}%`; actions.append(detail);
+    const actions = document.createElement('div'); actions.className = 'job-actions'; const detail = document.createElement('small'); detail.textContent = job.state !== 'cancelled' && job.speed ? `${job.speed} · ${job.eta || ''}` : `${Math.round(job.progress || 0)}%`; actions.append(detail);
     const buttons = document.createElement('div'); buttons.className = 'job-buttons';
     if (job.state === 'paused') { const resume = document.createElement('button'); resume.className = 'text-button'; resume.textContent = 'Reintentar ahora'; resume.onclick = () => window.desktop.resumeDownload(job.id); buttons.append(resume); }
     if (job.state === 'downloading' || job.state === 'paused') { const cancel = document.createElement('button'); cancel.className = 'text-button'; cancel.textContent = 'Cancelar'; cancel.onclick = () => window.desktop.cancelDownload(job.id); buttons.append(cancel); }
@@ -252,7 +261,7 @@ function renderJobs() {
     const thumbnail = document.createElement('img'); thumbnail.className = `job-thumbnail${job.thumbnail ? '' : ' placeholder'}`; thumbnail.src = job.thumbnail || 'assets/mb-logo.png'; thumbnail.alt = ''; thumbnail.loading = 'lazy'; thumbnail.onerror = () => { thumbnail.onerror = null; thumbnail.src = 'assets/mb-logo.png'; thumbnail.classList.add('placeholder'); };
     const content = document.createElement('div'); content.className = 'job-content'; content.append(top, progress, actions);
     const header = document.createElement('div'); header.className = 'job-header'; header.append(thumbnail, content); row.append(header);
-    if (job.diagnosis) { const details = document.createElement('details'); details.className = 'job-diagnosis'; const summary = document.createElement('summary'); summary.textContent = 'Diagnóstico técnico'; const text = document.createElement('pre'); text.textContent = job.diagnosis; details.append(summary, text); row.append(details); }
+    if (job.diagnosis && job.state !== 'cancelled') { const details = document.createElement('details'); details.className = 'job-diagnosis'; const summary = document.createElement('summary'); summary.textContent = 'Diagnóstico técnico'; const text = document.createElement('pre'); text.textContent = job.diagnosis; details.append(summary, text); row.append(details); }
     $('downloadList').append(row);
   });
 }
