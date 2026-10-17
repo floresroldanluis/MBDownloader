@@ -16,8 +16,7 @@ function showToast(text, error = false) {
 function effectiveDark(theme) {
   if (theme === 'dark') return true;
   if (theme === 'light') return false;
-  const hour = new Date().getHours();
-  return hour < 7 || hour >= 19;
+  return window.MBThemeSchedule.shouldUseDarkTheme();
 }
 function applyTheme(theme) {
   const dark = effectiveDark(theme);

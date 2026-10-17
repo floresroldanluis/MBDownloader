@@ -11,10 +11,11 @@ const { TelegramClient } = require('teleproto');
 const { StringSession } = require('teleproto/sessions');
 
 const OFFICIAL_UPDATE_URL = 'https://github.com/floresroldanluis/MBDownloader';
+const THEME_SCHEDULE_VERSION = 1;
 
 const defaultSettings = {
   theme: 'auto', destination: '', updateUrl: OFFICIAL_UPDATE_URL, browserCookies: 'none',
-  concurrentDownloads: 2, closeToTray: false, history: []
+  concurrentDownloads: 2, closeToTray: false, history: [], themeScheduleVersion: THEME_SCHEDULE_VERSION
 };
 
 function requestJson(url, redirects = 0) {
@@ -116,8 +117,17 @@ class SettingsStore {
   constructor() {
     this.ready = false;
     this.file = path.join(app.getPath('userData'), 'settings.json');
-    this.settings = { ...defaultSettings, destination: app.getPath('downloads') };
-    try { this.settings = { ...this.settings, ...JSON.parse(fs.readFileSync(this.file, 'utf8')) }; } catch {}
+    let storedSettings = {};
+    try { storedSettings = JSON.parse(fs.readFileSync(this.file, 'utf8')); } catch {}
+    this.settings = { ...defaultSettings, destination: app.getPath('downloads'), ...storedSettings };
+    if (storedSettings.themeScheduleVersion !== THEME_SCHEDULE_VERSION) {
+      this.settings.theme = 'auto';
+      this.settings.themeScheduleVersion = THEME_SCHEDULE_VERSION;
+      try {
+        fs.mkdirSync(path.dirname(this.file), { recursive: true });
+        fs.writeFileSync(this.file, JSON.stringify(this.settings, null, 2));
+      } catch {}
+    }
     if (!['auto', 'light', 'dark'].includes(this.settings.theme)) this.settings.theme = 'auto';
     if (!this.settings.updateUrl || /github\.com\/usuario\/repositorio/i.test(this.settings.updateUrl)) {
       this.settings.updateUrl = OFFICIAL_UPDATE_URL;
