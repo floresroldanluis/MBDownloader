@@ -1,9 +1,9 @@
 {
   "name": "mb-downloader",
-  "version": "0.4.32",
+  "version": "0.4.33",
   "description": "Descargador multimedia de escritorio con motores actualizables",
   "main": "src/main.js",
-  "author": "Luis",
+  "author": "AZVL",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
