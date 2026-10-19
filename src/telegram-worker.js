@@ -6,10 +6,13 @@ const parentPort = process.parentPort || {
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const https = require('node:https');
-const { TelegramClient } = require('teleproto');
+const { TelegramClient, Api } = require('teleproto');
 const { StringSession } = require('teleproto/sessions');
 const { telegramErrorText } = require('./telegram-errors');
+const { applyTelegramCompatibility } = require('./telegram-compat');
 const { classifyDownloadFailure } = require('./domain');
+
+applyTelegramCompatibility(Api);
 
 let client = null;
 let profile = null;
