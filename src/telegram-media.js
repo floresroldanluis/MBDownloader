@@ -9,8 +9,17 @@ function telegramMediaDetails(message) {
   return {
     name: named?.fileName || '',
     mimeType: typeof document?.mimeType === 'string' ? document.mimeType : '',
-    duration: timed ? Number(timed.duration) : 0
+    duration: timed ? Number(timed.duration) : 0,
+    hasThumbnail: Array.isArray(document?.thumbs) && document.thumbs.length > 0
   };
 }
 
-module.exports = { telegramMediaDetails };
+function telegramEmbeddedThumbnail(message) {
+  const document = message?.document || message?.media?.document || null;
+  const thumbnails = Array.isArray(document?.thumbs) ? document.thumbs : [];
+  const thumbnail = thumbnails.find(item => Buffer.isBuffer(item?.bytes) && item.bytes.length > 0);
+  if (!thumbnail) return null;
+  return { bytes: thumbnail.bytes, stripped: thumbnail.className === 'PhotoStrippedSize' || thumbnail.constructor?.name === 'PhotoStrippedSize' };
+}
+
+module.exports = { telegramMediaDetails, telegramEmbeddedThumbnail };

@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { SettingsStore, EngineManager, TelegramService, DownloadManager, UpdateService } = require('./services');
+const { resolveDownloadedFile } = require('./downloaded-file');
 
 let win, settings, engines, telegram, downloads, updates;
 const telegramPrompts = new Map();
@@ -106,11 +107,8 @@ ipcMain.handle('update:check', (_, url) => updates.check(url));
 ipcMain.handle('update:install', (_, info) => updates.install(info));
 ipcMain.handle('path:open', (_, target) => shell.openPath(target));
 ipcMain.handle('path:show', async (_, input) => {
-  const rawTarget = typeof input === 'string' ? input : input?.filePath;
-  const target = String(rawTarget || '').replace(/^['"]|['"]$/g, '').replace(/[\r\n]/g, '').trim();
-  if (!target || !fs.existsSync(target) || !fs.statSync(target).isFile()) {
-    return { found: false };
-  }
+  const target = resolveDownloadedFile(typeof input === 'string' ? { filePath: input } : input);
+  if (!target) return { found: false };
   const normalized = path.normalize(target);
   if (process.platform === 'win32') spawn('explorer.exe', [`/select,${normalized}`], { detached: true, stdio: 'ignore' }).unref();
   else shell.showItemInFolder(normalized);

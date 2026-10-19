@@ -224,7 +224,8 @@ async function updateJob(event) {
 async function persistHistory() { const history = [...state.jobs.values()].filter(job => ['completed', 'failed', 'cancelled'].includes(job.state)).slice(-50); state.settings = await window.desktop.saveSettings({ history }); }
 async function showDownloadedFile(job) {
   try {
-    const result = await window.desktop.showItem({ filePath: job.filePath, destination: job.destination || state.settings.destination });
+    const result = await window.desktop.showItem({ filePath: job.filePath, destination: job.destination || state.settings.destination, title: job.title, startedAt: job.startedAt });
+    if (result?.found && result.path && result.path !== job.filePath) { job.filePath = result.path; await persistHistory(); }
     showToast(result?.found ? 'Archivo seleccionado en el Explorador.' : 'El archivo no se encuentra disponible.', !result?.found);
   } catch (error) { showToast(`No se pudo mostrar el archivo: ${errorText(error)}`, true); }
 }
