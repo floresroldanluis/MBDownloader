@@ -6,6 +6,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { SettingsStore, EngineManager, TelegramService, DownloadManager, UpdateService } = require('./services');
 const { resolveDownloadedFile } = require('./downloaded-file');
+const { WINDOW_TRANSITION, smoothStep } = require('./window-transition');
 
 let win, settings, engines, telegram, downloads, updates;
 const telegramPrompts = new Map();
@@ -16,7 +17,7 @@ function animateOpacity(window, from, to, duration, complete) {
   const timer = setInterval(() => {
     if (window.isDestroyed()) return clearInterval(timer);
     const progress = Math.min(1, (Date.now() - startedAt) / duration);
-    const eased = progress * progress * (3 - 2 * progress);
+    const eased = smoothStep(progress);
     window.setOpacity(from + (to - from) * eased);
     if (progress === 1) { clearInterval(timer); complete?.(); }
   }, 16);
@@ -46,14 +47,14 @@ function createWindow() {
     win.center();
     win.show();
     win.webContents.send('app:animation', 'opening');
-    animateOpacity(win, 0, 1, 460);
+    animateOpacity(win, 0, 1, WINDOW_TRANSITION.openingMs);
   });
   win.on('close', event => {
     if (closing || win.isDestroyed()) return;
     event.preventDefault();
     closing = true;
     win.webContents.send('app:animation', 'closing');
-    animateOpacity(win, win.getOpacity(), 0, 340, () => win.destroy());
+    animateOpacity(win, win.getOpacity(), 0, WINDOW_TRANSITION.closingMs, () => win.destroy());
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   win.webContents.on('context-menu', (_, params) => {

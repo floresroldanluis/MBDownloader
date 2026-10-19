@@ -4,6 +4,18 @@ const $ = id => document.getElementById(id);
 const state = { settings: null, mode: 'video', metadata: null, update: null, jobs: new Map(), analysisId: 0 };
 let toastTimer;
 
+function playAppAnimation(phase) {
+  const className = phase === 'closing' ? 'app-closing' : 'app-opening';
+  document.body.classList.remove('app-opening', 'app-closing');
+  void document.body.offsetWidth;
+  document.body.classList.add(className);
+  if (phase === 'opening') {
+    document.querySelector('.app-shell')?.addEventListener('animationend', () => {
+      document.body.classList.remove('app-opening');
+    }, { once: true });
+  }
+}
+
 function setMessage(text, error = false) { $('message').textContent = text; $('message').classList.toggle('error', error); }
 function showToast(text, error = false) {
   const toast = $('toast');
@@ -35,10 +47,7 @@ async function toggleTheme() {
 function errorText(error) { return (error?.message || String(error)).replace(/^Error invoking remote method '[^']+': Error:\s*/i, ''); }
 
 async function init() {
-  window.desktop.onAppAnimation(phase => {
-    document.body.classList.remove('app-opening', 'app-closing');
-    document.body.classList.add(phase === 'closing' ? 'app-closing' : 'app-opening');
-  });
+  window.desktop.onAppAnimation(playAppAnimation);
   state.settings = await window.desktop.getSettings();
   applyTheme(state.settings.theme);
   window.setInterval(refreshAutomaticTheme, 60_000);

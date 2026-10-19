@@ -4,21 +4,23 @@ main {
 
 body.app-opening .app-shell {
   animation: app-reveal 520ms cubic-bezier(.16, 1, .3, 1) both;
+  transform-origin: 50% 42%;
 }
 
 body.app-closing .app-shell {
-  animation: app-dismiss 320ms cubic-bezier(.4, 0, 1, 1) both;
+  animation: app-dismiss 360ms cubic-bezier(.4, 0, 1, 1) both;
+  transform-origin: 50% 42%;
   pointer-events: none;
 }
 
 @keyframes app-reveal {
-  from { opacity: 0; transform: translateY(12px) scale(.985); filter: blur(5px); }
+  from { opacity: 0; transform: translateY(10px) scale(.982); filter: blur(4px); }
   to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
 @keyframes app-dismiss {
   from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-  to { opacity: 0; transform: translateY(7px) scale(.992); filter: blur(3px); }
+  to { opacity: 0; transform: translateY(6px) scale(.988); filter: blur(3px); }
 }
 
 .media-preview.analyzing {
