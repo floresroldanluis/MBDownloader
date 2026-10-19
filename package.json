@@ -1,6 +1,6 @@
 {
   "name": "mb-downloader",
-  "version": "0.4.38",
+  "version": "0.4.39",
   "description": "Descargador multimedia de escritorio con motores actualizables",
   "main": "src/main.js",
   "author": "AZVL",
@@ -19,6 +19,7 @@
   "build": {
     "appId": "com.luis.mbdownloader",
     "productName": "MB Downloader",
+    "npmRebuild": false,
     "asar": true,
     "asarUnpack": [
       "src/telegram-*.js",
@@ -62,6 +63,6 @@
   },
   "dependencies": {
     "@phosphor-icons/web": "^2.1.2",
-    "teleproto": "^1.230.0"
+    "telegram": "^2.26.22"
   }
 }
