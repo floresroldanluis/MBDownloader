@@ -8,6 +8,5 @@ test('empaqueta todas las dependencias locales del motor de Telegram', () => {
   assert.ok(packageConfig.build.asarUnpack.includes('src/telegram-*.js'));
   assert.ok(packageConfig.build.asarUnpack.includes('src/domain.js'));
   assert.ok(packageConfig.build.asarUnpack.includes('node_modules/**/*'));
-  assert.equal(typeof packageConfig.dependencies.telegram, 'string');
-  assert.equal(packageConfig.dependencies.teleproto, undefined);
+  assert.equal(typeof packageConfig.dependencies.teleproto, 'string');
 });

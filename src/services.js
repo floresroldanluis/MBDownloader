@@ -7,8 +7,8 @@ const path = require('node:path');
 const { spawn, spawnSync, fork } = require('node:child_process');
 const https = require('node:https');
 const { buildDownloadArgs, classifyDownloadFailure, usesTelegramEngine, parseGoogleDriveFileId, parseGoogleDriveMetadataHtml, parseGithubRepository } = require('./domain');
-const { TelegramClient } = require('telegram');
-const { StringSession } = require('telegram/sessions');
+const { TelegramClient } = require('teleproto');
+const { StringSession } = require('teleproto/sessions');
 
 const OFFICIAL_UPDATE_URL = 'https://github.com/floresroldanluis/MBDownloader';
 const THEME_SCHEDULE_VERSION = 1;

@@ -6,9 +6,10 @@ const parentPort = process.parentPort || {
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const https = require('node:https');
-const { TelegramClient } = require('telegram');
-const { StringSession } = require('telegram/sessions');
+const { TelegramClient } = require('teleproto');
+const { StringSession } = require('teleproto/sessions');
 const { telegramErrorText } = require('./telegram-errors');
+const { telegramMediaDetails } = require('./telegram-media');
 const { classifyDownloadFailure } = require('./domain');
 
 let client = null;
@@ -77,7 +78,7 @@ const methods = {
   },
   status() { return { connected: Boolean(client), profile }; },
   async disconnect() { for (const item of active.values()) item.cancelled = true; if (client) { try { await client.logOut(); } catch {} try { await client.disconnect(); } catch {} } client = null; profile = null; return { connected: false }; },
-  async metadata(url) { const message = await resolveMessage(url); return { id: `telegram-${message.id}`, title: message.file?.name || `telegram_${message.id}`, uploader: message.chat?.title || 'Telegram', duration_string: message.file?.duration ? `${message.file.duration}s` : '', thumbnail: null, telegram: true }; },
+  async metadata(url) { const message = await resolveMessage(url); const file = telegramMediaDetails(message); return { id: `telegram-${message.id}`, title: file.name || `telegram_${message.id}`, uploader: message.chat?.title || 'Telegram', duration_string: file.duration ? `${file.duration}s` : '', thumbnail: null, telegram: true }; },
   start(job) {
     const id = `${Date.now()}-tg-${Math.random().toString(16).slice(2)}`; const record = { cancelled: false, state: 'downloading', attempt: 0, progress: 0, manualResume: false }; active.set(id, record);
     const emit = payload => send({ type: 'event', channel: 'download:event', payload: { id, ...payload } });
@@ -88,7 +89,8 @@ const methods = {
         while (!record.cancelled) {
           try {
             const message = await resolveMessage(job.url);
-            const name = message.file?.name || `telegram_${message.id}${message.file?.mimeType?.startsWith('video') ? '.mp4' : ''}`;
+            const file = telegramMediaDetails(message);
+            const name = file.name || `telegram_${message.id}${file.mimeType.startsWith('video') ? '.mp4' : ''}`;
             target = path.join(job.destination, name); partial = `${target}.part`;
             record.state = 'downloading';
             await client.downloadMedia(message, { outputFile: partial, progressCallback: (received, total) => {
