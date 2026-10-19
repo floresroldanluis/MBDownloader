@@ -11,17 +11,19 @@ function resolveDownloadedFile(input = {}) {
   const requested = String(input.filePath || '').replace(/^['"]|['"]$/g, '').replace(/[\r\n]/g, '').trim();
   if (requested && fs.existsSync(requested) && fs.statSync(requested).isFile()) return requested;
 
-  const destination = String(input.destination || (requested ? path.dirname(requested) : '')).trim();
-  if (!destination || !fs.existsSync(destination) || !fs.statSync(destination).isDirectory()) return null;
-
   const expectedStem = comparable(requested ? path.parse(requested).name : '');
   const title = comparable(input.title);
-  const files = fs.readdirSync(destination, { withFileTypes: true })
+  const directories = [input.destination, input.fallbackDestination, requested ? path.dirname(requested) : '']
+    .map(value => String(value || '').trim())
+    .filter((value, index, values) => value && values.indexOf(value) === index)
+    .filter(value => fs.existsSync(value) && fs.statSync(value).isDirectory());
+
+  const files = directories.flatMap(destination => fs.readdirSync(destination, { withFileTypes: true })
     .filter(entry => entry.isFile() && !/\.(?:part|ytdl)$/i.test(entry.name))
     .map(entry => {
       const fullPath = path.join(destination, entry.name);
       return { fullPath, stem: comparable(path.parse(entry.name).name), modified: fs.statSync(fullPath).mtimeMs };
-    });
+    }));
 
   const exactStem = files.find(file => expectedStem && file.stem === expectedStem);
   if (exactStem) return exactStem.fullPath;

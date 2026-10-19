@@ -1,6 +1,6 @@
 {
   "name": "mb-downloader",
-  "version": "0.4.42",
+  "version": "0.4.44",
   "description": "Descargador multimedia de escritorio con motores actualizables",
   "main": "src/main.js",
   "author": "AZVL",
@@ -37,6 +37,10 @@
         "filter": [
           "*.exe"
         ]
+      },
+      {
+        "from": "build/icon.ico",
+        "to": "mb-downloader-0.4.44.ico"
       }
     ],
     "directories": {

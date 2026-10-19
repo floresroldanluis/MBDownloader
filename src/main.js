@@ -111,8 +111,7 @@ ipcMain.handle('path:show', async (_, input) => {
   const target = resolveDownloadedFile(typeof input === 'string' ? { filePath: input } : input);
   if (!target) return { found: false };
   const normalized = path.normalize(target);
-  if (process.platform === 'win32') spawn('explorer.exe', [`/select,${normalized}`], { detached: true, stdio: 'ignore' }).unref();
-  else shell.showItemInFolder(normalized);
+  shell.showItemInFolder(normalized);
   return { found: true, path: normalized };
 });
 ipcMain.handle('path:trash', async (_, target) => {
