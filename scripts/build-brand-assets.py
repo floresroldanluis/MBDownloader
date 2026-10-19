@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "design" / "logo-options" / "option-3-play-download.png"
+SOURCE = ROOT / "design" / "logo-options-with-name" / "17-descarga-rapida-transparent.png"
 PNG_OUTPUT = ROOT / "src" / "renderer" / "assets" / "mb-logo.png"
 ICO_OUTPUT = ROOT / "build" / "icon.ico"
 HEADER_OUTPUT = ROOT / "build" / "installerHeader.bmp"
